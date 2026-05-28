@@ -51,23 +51,6 @@ function withAutoDirection(
   };
 }
 
-/**
- * Supports custom Markdown direction blocks:
- *
- * :::rtl
- * ## Heading
- * - item
- * :::
- *
- * :::ltr
- * English text
- * :::
- *
- * Also supports inline/text directives if you use them:
- *
- * :rtl[متن فارسی]
- * :ltr[English text]
- */
 function remarkDirectionDirective() {
   return (tree: any) => {
     visit(tree, (node: any, index?: number, parent?: any) => {
@@ -117,7 +100,10 @@ export function MarkdownPreview({
 
   return (
     <ScrollArea className={cn('h-full', className)}>
-      <div className="prose prose-slate dark:prose-invert max-w-none p-8 markdown-preview-root">
+      <div
+        className="markdown-preview-export-root prose prose-slate dark:prose-invert max-w-none p-8 markdown-preview-root"
+        data-export-root="true"
+      >
         <ReactMarkdown
           remarkPlugins={[
             remarkGfm,

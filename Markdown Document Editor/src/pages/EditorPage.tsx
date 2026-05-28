@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { TopBar } from '../components/layout/TopBar';
 import { DocumentSidebar } from '../features/documents/components/DocumentSidebar';
 import { EditorToolbar } from '../features/editor/components/EditorToolbar';
-import { MarkdownEditor, MarkdownEditorHandle } from '../features/editor/components/MarkdownEditor';
+import {
+  MarkdownEditor,
+  MarkdownEditorHandle,
+} from '../features/editor/components/MarkdownEditor';
 import { MarkdownPreview } from '../features/preview/components/MarkdownPreview';
 import { SettingsSidebar } from '../features/settings/components/SettingsSidebar';
 import { CommandPalette } from '../features/command-palette/components/CommandPalette';
@@ -27,7 +30,7 @@ import {
   insertNumberedList,
   insertTaskList,
   insertTable,
-  insertHorizontalRule, 
+  insertHorizontalRule,
   insertMermaidBlock,
   insertCustomBlock,
   insertMathBlock,
@@ -46,12 +49,15 @@ export function EditorPage() {
 
   const activeDoc = getActiveDocument();
   const editorRef = useRef<MarkdownEditorHandle>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef({ start: 0, end: 0 });
+
   const [cursorPosition, setCursorPosition] = useState<{
     start: number;
     end: number;
     timestamp?: number;
   } | null>(null);
+
   const [currentEditorDirection, setCurrentEditorDirection] =
     useState<TextDirection>('rtl');
 
@@ -213,7 +219,9 @@ export function EditorPage() {
 
             {showPreview && (
               <div className="flex-1 overflow-hidden">
-                <MarkdownPreview content={activeDoc?.content || ''} />
+                <div ref={previewRef} className="h-full">
+                  <MarkdownPreview content={activeDoc?.content || ''} className="h-full" />
+                </div>
               </div>
             )}
           </div>
@@ -224,7 +232,7 @@ export function EditorPage() {
 
       <SearchReplacePanel />
       <CommandPalette />
-      <ExportModal />
+      <ExportModal previewRef={previewRef} />
       <TemplatePickerModal />
       <HistoryPanel />
     </div>

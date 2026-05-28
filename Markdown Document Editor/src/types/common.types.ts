@@ -76,7 +76,10 @@ export interface Version {
 export interface Comment {
   id: string;
   documentId: string;
-  range?: { start: number; end: number };
+  range?: {
+    start: number;
+    end: number;
+  };
   blockId?: string;
   text: string;
   author: string;

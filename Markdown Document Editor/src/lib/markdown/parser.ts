@@ -21,23 +21,24 @@ function slugifyBlockType(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/**
+ * Converts custom block syntax into HTML.
+ *
+ * Supported examples:
+ *
+ * ::: important
+ * Content here
+ * :::
+ *
+ * :::rtl
+ * متن فارسی
+ * :::
+ *
+ * :::ltr
+ * English text
+ * :::
+ */
 export function parseCustomBlocks(content: string): string {
-  // Accept any custom block title:
-  //
-  // ::: important
-  // Content
-  // :::
-  //
-  // But handle special direction blocks separately:
-  //
-  // :::rtl
-  // متن فارسی
-  // :::
-  //
-  // :::ltr
-  // English text
-  // :::
-
   const blockPattern = /^:::\s*([^\n]+?)\s*\n([\s\S]*?)\n:::\s*$/gm;
 
   return content.replace(blockPattern, (_, rawTitle, blockContent) => {
@@ -60,19 +61,51 @@ ${contentValue}
   });
 }
 
+/**
+ * Converts wiki links into markdown links.
+ *
+ * [[Page Name]]
+ *
+ * becomes:
+ *
+ * [Page Name](#wiki/page-name)
+ */
 export function parseWikiLinks(content: string): string {
-  // Replace wiki links [[Page Name]] with markdown links
   const wikiLinkPattern = /\[\[([^\]]+)\]\]/g;
 
   return content.replace(wikiLinkPattern, (_, pageName) => {
-    const slug = String(pageName)
-      .toLowerCase()
-      .replace(/\s+/g, '-');
+    const label = String(pageName).trim();
 
-    return `[${pageName}](#wiki/${slug})`;
+    const slug = label
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\p{L}\p{N}-]+/gu, '')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    return `[${label}](#wiki/${slug})`;
   });
 }
 
+/**
+ * Converts supported page-break markers into HTML.
+ *
+ * Supported:
+ *
+ * <!--page-break-->
+ * <!-- page-break -->
+ * <--page-break-->
+ */
+function parsePageBreaks(content: string): string {
+  return content.replace(
+    /^\s*(?:<!--\s*page-break\s*-->|<--page-break-->)\s*$/gim,
+    '\n<div class="page-break" aria-hidden="true"></div>\n'
+  );
+}
+
+/**
+ * Runs all markdown preprocessing before rendering/exporting.
+ */
 export function preprocessMarkdown(content: string): string {
   let processed = content;
 
@@ -81,11 +114,4 @@ export function preprocessMarkdown(content: string): string {
   processed = parsePageBreaks(processed);
 
   return processed;
-}
-
-function parsePageBreaks(content: string): string {
-  return content.replace(
-    /^\s*<--page-break-->\s*$/gm,
-    '\n<div class="page-break"></div>\n'
-  );
 }

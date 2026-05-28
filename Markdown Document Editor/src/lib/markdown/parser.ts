@@ -1,8 +1,9 @@
 // src/lib/markdown/parser.ts
 
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 
-export const remarkPlugins = [remarkGfm];
+export const remarkPlugins = [remarkGfm, remarkMath];
 
 function escapeHtml(value: string): string {
   return value

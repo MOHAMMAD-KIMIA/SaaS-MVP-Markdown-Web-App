@@ -364,3 +364,29 @@
   direction: ltr;
   text-align: left;
 }
+
+
+.markdown-dir {
+  unicode-bidi: isolate;
+}
+
+.markdown-dir-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.markdown-dir-ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.markdown-dir-rtl > * {
+  direction: rtl;
+  text-align: right;
+}
+
+.markdown-dir-ltr > * {
+  direction: ltr;
+  text-align: left;
+}
+

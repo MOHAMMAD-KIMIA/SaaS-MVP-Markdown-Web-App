@@ -5,6 +5,7 @@ import remarkMath from 'remark-math';
 import remarkDirective from 'remark-directive';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
+import { visit , SKIP} from 'unist-util-visit';
 
 import 'katex/dist/katex.min.css';
 import '../../../styles/MarkdownPreview.css';
@@ -50,6 +51,65 @@ function withAutoDirection(
   };
 }
 
+/**
+ * Supports custom Markdown direction blocks:
+ *
+ * :::rtl
+ * ## Heading
+ * - item
+ * :::
+ *
+ * :::ltr
+ * English text
+ * :::
+ *
+ * Also supports inline/text directives if you use them:
+ *
+ * :rtl[متن فارسی]
+ * :ltr[English text]
+ */
+
+function remarkDirectionDirective() {
+  return (tree: any) => {
+    visit(tree, (node: any, index?: number, parent?: any) => {
+      if (!parent || index === undefined) return;
+
+      if (
+        node.type === 'containerDirective' &&
+        (node.name === 'rtl' || node.name === 'ltr')
+      ) {
+        parent.children.splice(
+          index,
+          1,
+          {
+            type: 'html',
+            value: `<div dir="${node.name}" class="markdown-dir markdown-dir-${node.name}">`,
+          },
+          ...node.children,
+          {
+            type: 'html',
+            value: '</div>',
+          }
+        );
+
+        return [SKIP, index + node.children.length + 2];
+      }
+
+      if (
+        (node.type === 'leafDirective' || node.type === 'textDirective') &&
+        (node.name === 'rtl' || node.name === 'ltr')
+      ) {
+        const data = node.data || (node.data = {});
+        data.hName = node.type === 'textDirective' ? 'span' : 'div';
+        data.hProperties = {
+          dir: node.name,
+          className: ['markdown-dir', `markdown-dir-${node.name}`],
+        };
+      }
+    });
+  };
+}
+
 export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   const processedContent = preprocessMarkdown(content);
 
@@ -61,6 +121,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
             remarkGfm,
             remarkMath,
             remarkDirective,
+            remarkDirectionDirective,
             remarkTextDirection,
           ]}
           rehypePlugins={[rehypeKatex, rehypeRaw]}

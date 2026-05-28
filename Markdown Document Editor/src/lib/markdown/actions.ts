@@ -216,7 +216,6 @@ function stripExistingInlineDirectionMarks(value: string): string {
 
 function stripExistingDirectionBlock(value: string): string {
   const trimmed = value.trim();
-
   const blockMatch = trimmed.match(/^:::(rtl|ltr)\s*\n([\s\S]*?)\n:::$/);
 
   if (!blockMatch) {
@@ -228,6 +227,17 @@ return value;
   const trailingWhitespace = value.match(/\s*$/)?.[0] ?? '';
 
   return `${leadingWhitespace}${inner}${trailingWhitespace}`;
+}
+
+function getLineBounds(text: string, index: number) {
+  const lineStart = text.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+  const nextNewline = text.indexOf('\n', index);
+  const lineEnd = nextNewline === -1 ? text.length : nextNewline;
+  return { lineStart, lineEnd };
+}
+
+function isHeadingLine(line: string): boolean {
+  return /^(#{1,6})\s+/.test(line.trimStart());
 }
 
 export const setTextDirection = (
@@ -244,7 +254,6 @@ const after = content.slice(end);
 
 const needsLeadingNewline =
 before.length > 0 && !before.endsWith('\n') ? '\n' : '';
-
 const needsTrailingNewline =
 after.length > 0 && !after.startsWith('\n') ? '\n' : '';
 
@@ -267,18 +276,14 @@ end: newSelectionEnd,
 
   const selectedText = content.slice(start, end);
 
-  // IMPORTANT:
-  // Only multiline selections should become block direction.
-  // Any single-line selection stays inline.
+  // Multiline selection => block
   if (selectedText.includes('\n')) {
 const cleanSelectedText = stripExistingDirectionBlock(selectedText);
-
 const before = content.slice(0, start);
 const after = content.slice(end);
 
 const needsLeadingNewline =
 before.length > 0 && !before.endsWith('\n') ? '\n' : '';
-
 const needsTrailingNewline =
 after.length > 0 && !after.startsWith('\n') ? '\n' : '';
 
@@ -298,7 +303,37 @@ end: newSelectionEnd,
 };
   }
 
-  // Single-line selection => inline direction marks
+  // If selection is inside a heading line, wrap the whole heading line as a block
+  const { lineStart, lineEnd } = getLineBounds(content, start);
+  const fullLine = content.slice(lineStart, lineEnd);
+
+  if (isHeadingLine(fullLine)) {
+const cleanLine = stripExistingDirectionBlock(fullLine);
+const before = content.slice(0, lineStart);
+const after = content.slice(lineEnd);
+
+const needsLeadingNewline =
+before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+const needsTrailingNewline =
+after.length > 0 && !after.startsWith('\n') ? '\n' : '';
+
+const prefix = `${needsLeadingNewline}:::${direction}\n`;
+const suffix = `\n:::${needsTrailingNewline}`;
+
+const newText = before + prefix + cleanLine + suffix + after;
+const newSelectionStart = before.length + prefix.length;
+const newSelectionEnd = newSelectionStart + cleanLine.length;
+
+return {
+newText,
+newSelection: {
+start: newSelectionStart,
+end: newSelectionEnd,
+},
+};
+  }
+
+  // Single-line normal inline selection => Unicode direction marks
   const cleanSelectedText = stripExistingInlineDirectionMarks(selectedText);
   const isolateStart = direction === 'rtl' ? RLI : LRI;
   const replacement = `${isolateStart}${cleanSelectedText}${PDI}`;

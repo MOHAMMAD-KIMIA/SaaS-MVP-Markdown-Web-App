@@ -206,58 +206,28 @@ export function insertWikiLink(
   return insertMarkdown(text, start, end, '[[', ']]', 'Page Name');
 }
 
-/**
- * Direction helpers
- *
- * Inline selections use Unicode bidi isolate marks:
- * LRI = Left-to-right isolate
- * RLI = Right-to-left isolate
- * PDI = Pop directional isolate
- *
- * Block selections use Markdown/container syntax:
- * :::rtl
- * content
- * :::
- */
 const LRI = '\u2066';
 const RLI = '\u2067';
 const PDI = '\u2069';
-
-function isLineBoundary(text: string, index: number): boolean {
-  return index <= 0 || index >= text.length || text[index - 1] === '\n';
-}
-
-function isSelectionBlockLike(
-  text: string,
-  start: number,
-  end: number
-): boolean {
-  const selected = text.slice(start, end);
-
-  // Multiline selection should be treated as a block.
-  if (selected.includes('\n')) return true;
-
-  // Whole-line selection should also be treated as a block.
-  const startsAtLineStart = isLineBoundary(text, start);
-  const endsAtLineEnd = end >= text.length || text[end] === '\n';
-
-  return startsAtLineStart && endsAtLineEnd;
-}
 
 function stripExistingInlineDirectionMarks(value: string): string {
   return value.replace(/[\u2066\u2067\u2069]/g, '');
 }
 
 function stripExistingDirectionBlock(value: string): string {
-  const match = value.match(/^(\s*):::(rtl|ltr)\s*\n([\s\S]*?)\n:::(\s*)$/);
+  const trimmed = value.trim();
 
-  if (!match) return value;
+  const blockMatch = trimmed.match(/^:::(rtl|ltr)\s*\n([\s\S]*?)\n:::$/);
 
-  const leading = match[1] ?? '';
-  const inner = match[3] ?? '';
-  const trailing = match[4] ?? '';
+  if (!blockMatch) {
+return value;
+  }
 
-  return `${leading}${inner}${trailing}`;
+  const inner = blockMatch[2];
+  const leadingWhitespace = value.match(/^\s*/)?.[0] ?? '';
+  const trailingWhitespace = value.match(/\s*$/)?.[0] ?? '';
+
+  return `${leadingWhitespace}${inner}${trailingWhitespace}`;
 }
 
 export const setTextDirection = (
@@ -268,10 +238,6 @@ export const setTextDirection = (
 ): InsertResult => {
   const hasSelection = start !== end;
 
-  /**
-   * No selection:
-   * Insert a direction block with placeholder content.
-   */
   if (!hasSelection) {
 const before = content.slice(0, start);
 const after = content.slice(end);
@@ -287,7 +253,6 @@ const placeholder = 'Content';
 const suffix = `\n:::${needsTrailingNewline}`;
 
 const newText = before + prefix + placeholder + suffix + after;
-
 const newSelectionStart = before.length + prefix.length;
 const newSelectionEnd = newSelectionStart + placeholder.length;
 
@@ -302,11 +267,10 @@ end: newSelectionEnd,
 
   const selectedText = content.slice(start, end);
 
-  /**
-   * Block-like selection:
-   * Use :::rtl / :::ltr only for multiline or whole-line selections.
-   */
-  if (isSelectionBlockLike(content, start, end)) {
+  // IMPORTANT:
+  // Only multiline selections should become block direction.
+  // Any single-line selection stays inline.
+  if (selectedText.includes('\n')) {
 const cleanSelectedText = stripExistingDirectionBlock(selectedText);
 
 const before = content.slice(0, start);
@@ -322,7 +286,6 @@ const prefix = `${needsLeadingNewline}:::${direction}\n`;
 const suffix = `\n:::${needsTrailingNewline}`;
 
 const newText = before + prefix + cleanSelectedText + suffix + after;
-
 const newSelectionStart = before.length + prefix.length;
 const newSelectionEnd = newSelectionStart + cleanSelectedText.length;
 
@@ -335,19 +298,12 @@ end: newSelectionEnd,
 };
   }
 
-  /**
-   * Inline selection:
-   * Use Unicode bidi isolate marks.
-   * This prevents Markdown structure from breaking inside a paragraph.
-   */
+  // Single-line selection => inline direction marks
   const cleanSelectedText = stripExistingInlineDirectionMarks(selectedText);
   const isolateStart = direction === 'rtl' ? RLI : LRI;
-  const isolateEnd = PDI;
+  const replacement = `${isolateStart}${cleanSelectedText}${PDI}`;
 
-  const replacement = `${isolateStart}${cleanSelectedText}${isolateEnd}`;
-
-  const newText =
-content.slice(0, start) + replacement + content.slice(end);
+  const newText = content.slice(0, start) + replacement + content.slice(end);
 
   return {
 newText,
@@ -388,13 +344,10 @@ export const toggleStrikethrough = (
   end: number
 ): InsertResult => {
   const selectedText = content.substring(start, end);
-
-  // Check if already strikethrough
   const before = content.substring(Math.max(0, start - 2), start);
   const after = content.substring(end, Math.min(content.length, end + 2));
 
   if (before === '~~' && after === '~~') {
-// Remove strikethrough
 const newText =
 content.substring(0, start - 2) +
 selectedText +
@@ -404,22 +357,20 @@ return {
 newText,
 newSelection: { start: start - 2, end: end - 2 },
 };
-  }
-
-  // Add strikethrough
-  const fallback = 'strikethrough text';
-  const wrappedText = `~~${selectedText || fallback}~~`;
-
-  const newText =
+  } else {
+const value = selectedText || 'strikethrough text';
+const wrappedText = `~~${value}~~`;
+const newText =
 content.substring(0, start) + wrappedText + content.substring(end);
 
-  return {
+return {
 newText,
 newSelection: {
 start: start + 2,
-end: start + 2 + (selectedText || fallback).length,
+end: start + 2 + value.length,
 },
-  };
+};
+  }
 };
 
 export const insertMathBlock = (
@@ -433,10 +384,7 @@ content.substring(0, start) + mathBlock + content.substring(end);
 
   return {
 newText,
-newSelection: {
-start: start + 9,
-end: start + 23,
-},
+newSelection: { start: start + 4, end: start + 4 + 19 },
   };
 };
 
@@ -446,9 +394,8 @@ export const insertInlineMath = (
   end: number
 ): InsertResult => {
   const selectedText = content.substring(start, end);
-  const placeholder = 'x^2';
-  const mathText = `$${selectedText || placeholder}$`;
-
+  const value = selectedText || 'x^2';
+  const mathText = `$${value}$`;
   const newText =
 content.substring(0, start) + mathText + content.substring(end);
 
@@ -456,7 +403,7 @@ content.substring(0, start) + mathText + content.substring(end);
 newText,
 newSelection: {
 start: start + 1,
-end: start + 1 + (selectedText || placeholder).length,
+end: start + 1 + value.length,
 },
   };
 };
@@ -480,7 +427,6 @@ newSelection: { start: selectionStart, end: selectionEnd },
 
   const headingPrefix = '#'.repeat(level) + ' ';
 
-  // No selection -> insert placeholder and select it
   if (selectionStart === selectionEnd) {
 const placeholder = 'Heading';
 const before = text.slice(0, selectionStart);
@@ -522,7 +468,6 @@ currentPos = lineEnd + 1;
   }
 
   let blockStartOffset = 0;
-
   for (let i = 0; i < startLine; i++) {
 blockStartOffset += lines[i].length + 1;
   }
@@ -536,7 +481,6 @@ lines[i] = headingPrefix + lines[i];
 
   const newText = lines.join('\n');
 
-  // Single-line selection: preserve selected text range as much as possible
   if (startLine === endLine) {
 const cleanedSelected = originalSelectedText.replace(/^(#{1,6})\s+/, '');
 
@@ -549,11 +493,9 @@ end: blockStartOffset + headingPrefix.length + cleanedSelected.length,
 };
   }
 
-  // Multi-line selection: select transformed block contents
   const newSelectionStart = blockStartOffset + headingPrefix.length;
 
   let newSelectionEnd = blockStartOffset;
-
   for (let i = startLine; i <= endLine; i++) {
 newSelectionEnd += lines[i].length;
 if (i < endLine) newSelectionEnd += 1;
@@ -574,26 +516,17 @@ function removeHeading(
   selectionEnd: number
 ): InsertResult {
   const lines = text.split('\n');
-
   let currentPos = 0;
   let startLine = -1;
   let endLine = -1;
 
-  // Find which lines are selected
   for (let i = 0; i < lines.length; i++) {
 const lineLength = lines[i].length + 1;
 
-if (
-currentPos <= selectionStart &&
-selectionStart < currentPos + lineLength
-) {
+if (currentPos <= selectionStart && selectionStart < currentPos + lineLength) {
 startLine = i;
 }
-
-if (
-currentPos <= selectionEnd &&
-selectionEnd <= currentPos + lineLength
-) {
+if (currentPos <= selectionEnd && selectionEnd <= currentPos + lineLength) {
 endLine = i;
 }
 
@@ -607,7 +540,6 @@ if (startLine !== -1 && endLine !== -1) break;
 
   let totalRemoved = 0;
 
-  // Remove heading from selected lines
   for (let i = startLine; i <= endLine; i++) {
 const line = lines[i];
 const headingMatch = line.match(/^(#{1,6})\s+/);
@@ -621,16 +553,11 @@ totalRemoved += prefixLength;
 
   const newText = lines.join('\n');
 
-  // Adjust cursor position
-  const newSelectionStart = Math.max(0, selectionStart - totalRemoved);
-  const newSelectionEnd = Math.max(0, selectionEnd - totalRemoved);
-
   return {
 newText,
 newSelection: {
-start: newSelectionStart,
-end: newSelectionEnd,
+start: Math.max(0, selectionStart - totalRemoved),
+end: Math.max(0, selectionEnd - totalRemoved),
 },
   };
 }
-

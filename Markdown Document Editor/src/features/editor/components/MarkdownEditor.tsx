@@ -1,7 +1,18 @@
 // src/features/editor/components/MarkdownEditor.tsx
-import { forwardRef, useEffect, useRef, useImperativeHandle, KeyboardEvent } from 'react';
+import React, {
+  forwardRef,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  useState,
+  KeyboardEvent,
+} from 'react';
 import { cn } from '../../../lib/utils/cn';
-
+import {
+  getCurrentLineDirection,
+  isCaretInsideCodeOrMath,
+  TextDirection,
+} from '../../../lib/markdown/textDirection';
 
 interface MarkdownEditorProps {
   value: string;
@@ -11,6 +22,7 @@ interface MarkdownEditorProps {
   className?: string;
   showLineNumbers?: boolean;
   tabSize?: number;
+  onDirectionChange?: (dir: TextDirection) => void;
 }
 
 export interface MarkdownEditorHandle {
@@ -20,19 +32,42 @@ export interface MarkdownEditorHandle {
 }
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  ({ 
-    value, 
-    onChange, 
-    onSelectionChange, 
-    cursorPosition, 
-    className,
-    showLineNumbers = false,
-    tabSize = 2
-  }, ref) => {
+  (
+    {
+      value,
+      onChange,
+      onSelectionChange,
+      cursorPosition,
+      className,
+      showLineNumbers = false,
+      tabSize = 2,
+      onDirectionChange,
+    },
+    ref
+  ) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const lineNumbersRef = useRef<HTMLDivElement>(null);
     const pendingCursorRef = useRef<{ start: number; end: number } | null>(null);
     const lastTimestampRef = useRef<number | undefined>(undefined);
+    const [editorDir, setEditorDir] = useState<TextDirection>('rtl');
+
+    const applyDirection = (dir: TextDirection) => {
+      setEditorDir(dir);
+      onDirectionChange?.(dir);
+    };
+
+    const updateDirection = (text: string, caretPosition: number) => {
+      const nextDir: TextDirection = isCaretInsideCodeOrMath(text, caretPosition)
+        ? 'ltr'
+        : getCurrentLineDirection(text, caretPosition, 'rtl');
+
+      applyDirection(nextDir);
+    };
+
+    const syncSelectionAndDirection = (target: HTMLTextAreaElement) => {
+      onSelectionChange?.(target.selectionStart, target.selectionEnd);
+      updateDirection(target.value, target.selectionStart ?? 0);
+    };
 
     useImperativeHandle(ref, () => ({
       focus: () => {
@@ -41,6 +76,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       setSelection: (start: number, end: number) => {
         if (textareaRef.current) {
           textareaRef.current.setSelectionRange(start, end);
+          updateDirection(textareaRef.current.value, start);
         }
       },
       insertText: (text: string) => {
@@ -49,12 +85,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           const end = textareaRef.current.selectionEnd;
           const newValue = value.substring(0, start) + text + value.substring(end);
           onChange(newValue);
-          
+
           requestAnimationFrame(() => {
             if (textareaRef.current) {
               const newPosition = start + text.length;
               textareaRef.current.setSelectionRange(newPosition, newPosition);
               textareaRef.current.focus();
+              updateDirection(newValue, newPosition);
+              onSelectionChange?.(newPosition, newPosition);
             }
           });
         }
@@ -72,20 +110,22 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       if (pendingCursorRef.current && textareaRef.current) {
         const { start, end } = pendingCursorRef.current;
         pendingCursorRef.current = null;
-        
+
         requestAnimationFrame(() => {
           if (textareaRef.current) {
             textareaRef.current.focus();
             textareaRef.current.setSelectionRange(start, end);
+            updateDirection(textareaRef.current.value, start);
+            onSelectionChange?.(start, end);
           }
         });
       }
-    }, [value]);
+    }, [value, onSelectionChange]);
 
     useEffect(() => {
       const textarea = textareaRef.current;
       const lineNumbers = lineNumbersRef.current;
-      
+
       if (!textarea || !lineNumbers || !showLineNumbers) return;
 
       const handleScroll = () => {
@@ -96,74 +136,90 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       return () => textarea.removeEventListener('scroll', handleScroll);
     }, [showLineNumbers]);
 
+    useEffect(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const caret = textarea.selectionStart ?? 0;
+      updateDirection(value, caret);
+    }, [value]);
+
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onChange(e.target.value);
+      const newValue = e.target.value;
+      onChange(newValue);
+      updateDirection(newValue, e.target.selectionStart ?? 0);
     };
 
     const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
       const target = e.target as HTMLTextAreaElement;
-      onSelectionChange?.(target.selectionStart, target.selectionEnd);
+      syncSelectionAndDirection(target);
     };
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
       const textarea = e.currentTarget;
       const { selectionStart, selectionEnd } = textarea;
 
-      // Handle Tab key
       if (e.key === 'Tab' && !e.shiftKey) {
         e.preventDefault();
-        
+
         const spaces = ' '.repeat(tabSize);
-        
-        // If there's a selection, indent all selected lines
+
         if (selectionStart !== selectionEnd) {
           const beforeSelection = value.substring(0, selectionStart);
           const selection = value.substring(selectionStart, selectionEnd);
           const afterSelection = value.substring(selectionEnd);
-          
+
           const lineStartPos = beforeSelection.lastIndexOf('\n') + 1;
           const linesBeforeSelection = beforeSelection.substring(0, lineStartPos);
           const firstLinePrefix = beforeSelection.substring(lineStartPos);
-          
-          const indentedSelection = (firstLinePrefix + selection).split('\n').map(line => spaces + line).join('\n');
+
+          const indentedSelection = (firstLinePrefix + selection)
+            .split('\n')
+            .map((line) => spaces + line)
+            .join('\n');
+
           const newValue = linesBeforeSelection + indentedSelection + afterSelection;
-          
           onChange(newValue);
-          
+
           requestAnimationFrame(() => {
-            textarea.setSelectionRange(
-              selectionStart + tabSize,
-              selectionEnd + (indentedSelection.split('\n').length * tabSize)
-            );
+            const newStart = selectionStart + tabSize;
+            const newEnd =
+              selectionEnd + indentedSelection.split('\n').length * tabSize;
+
+            textarea.setSelectionRange(newStart, newEnd);
+            updateDirection(newValue, newStart);
+            onSelectionChange?.(newStart, newEnd);
           });
         } else {
-          // No selection, just insert spaces
-          const newValue = value.substring(0, selectionStart) + spaces + value.substring(selectionEnd);
+          const newValue =
+            value.substring(0, selectionStart) + spaces + value.substring(selectionEnd);
           onChange(newValue);
-          
+
           requestAnimationFrame(() => {
-            textarea.setSelectionRange(selectionStart + tabSize, selectionStart + tabSize);
+            const newPosition = selectionStart + tabSize;
+            textarea.setSelectionRange(newPosition, newPosition);
+            updateDirection(newValue, newPosition);
+            onSelectionChange?.(newPosition, newPosition);
           });
         }
         return;
       }
 
-      // Handle Shift+Tab (outdent)
       if (e.key === 'Tab' && e.shiftKey) {
         e.preventDefault();
-        
+
         const beforeSelection = value.substring(0, selectionStart);
         const selection = value.substring(selectionStart, selectionEnd);
         const afterSelection = value.substring(selectionEnd);
-        
+
         const lineStartPos = beforeSelection.lastIndexOf('\n') + 1;
         const linesBeforeSelection = beforeSelection.substring(0, lineStartPos);
         const firstLinePrefix = beforeSelection.substring(lineStartPos);
-        
+
         const lines = (firstLinePrefix + selection).split('\n');
         let totalRemoved = 0;
         let firstLineRemoved = 0;
-        
+
         const outdentedLines = lines.map((line, index) => {
           let removed = 0;
           for (let i = 0; i < Math.min(tabSize, line.length); i++) {
@@ -173,84 +229,93 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               break;
             }
           }
-          
+
           if (index === 0) firstLineRemoved = removed;
           totalRemoved += removed;
-          
+
           return line.substring(removed);
         });
-        
+
         const outdentedSelection = outdentedLines.join('\n');
         const newValue = linesBeforeSelection + outdentedSelection + afterSelection;
-        
+
         onChange(newValue);
-        
+
         requestAnimationFrame(() => {
           if (selectionStart === selectionEnd) {
-            textarea.setSelectionRange(
-              selectionStart - firstLineRemoved,
-              selectionStart - firstLineRemoved
-            );
+            const newPosition = selectionStart - firstLineRemoved;
+            textarea.setSelectionRange(newPosition, newPosition);
+            updateDirection(newValue, newPosition);
+            onSelectionChange?.(newPosition, newPosition);
           } else {
-            textarea.setSelectionRange(
-              selectionStart - firstLineRemoved,
-              selectionEnd - totalRemoved
-            );
+            const newStart = selectionStart - firstLineRemoved;
+            const newEnd = selectionEnd - totalRemoved;
+            textarea.setSelectionRange(newStart, newEnd);
+            updateDirection(newValue, newStart);
+            onSelectionChange?.(newStart, newEnd);
           }
         });
         return;
       }
 
-      // Auto-indent on Enter
       if (e.key === 'Enter') {
         const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
         const lineText = value.substring(lineStart, selectionStart);
         const indent = lineText.match(/^\s*/)?.[0] || '';
-        
-        // Check for list items
+
         const listMatch = lineText.match(/^(\s*)([-*+]|\d+\.)\s/);
-        
+
         if (listMatch) {
           e.preventDefault();
           const [, listIndent, marker] = listMatch;
-          
-          // If line only has the marker, remove it and outdent
+
           if (lineText.trim() === marker) {
-            const newValue = 
-              value.substring(0, lineStart) + 
-              value.substring(selectionEnd);
+            const newValue = value.substring(0, lineStart) + value.substring(selectionEnd);
             onChange(newValue);
-            
+
             requestAnimationFrame(() => {
               textarea.setSelectionRange(lineStart, lineStart);
+              updateDirection(newValue, lineStart);
+              onSelectionChange?.(lineStart, lineStart);
             });
           } else {
-            // Continue the list
-            const newMarker = marker.match(/\d+/) 
-              ? `${parseInt(marker) + 1}.` 
+            const newMarker = marker.match(/\d+/)
+              ? `${parseInt(marker, 10) + 1}.`
               : marker;
-            const newValue = 
-              value.substring(0, selectionStart) + 
-              '\n' + listIndent + newMarker + ' ' + 
+
+            const newValue =
+              value.substring(0, selectionStart) +
+              '\n' +
+              listIndent +
+              newMarker +
+              ' ' +
               value.substring(selectionEnd);
+
             onChange(newValue);
-            
+
             requestAnimationFrame(() => {
-              const newPosition = selectionStart + 1 + listIndent.length + newMarker.length + 1;
+              const newPosition =
+                selectionStart + 1 + listIndent.length + newMarker.length + 1;
               textarea.setSelectionRange(newPosition, newPosition);
+              updateDirection(newValue, newPosition);
+              onSelectionChange?.(newPosition, newPosition);
             });
           }
         } else if (indent) {
           e.preventDefault();
-          const newValue = 
-            value.substring(0, selectionStart) + 
-            '\n' + indent + 
+          const newValue =
+            value.substring(0, selectionStart) +
+            '\n' +
+            indent +
             value.substring(selectionEnd);
+
           onChange(newValue);
-          
+
           requestAnimationFrame(() => {
             const newPosition = selectionStart + 1 + indent.length;
             textarea.setSelectionRange(newPosition, newPosition);
+            updateDirection(newValue, newPosition);
+            onSelectionChange?.(newPosition, newPosition);
           });
         }
       }
@@ -265,20 +330,25 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           <div
             ref={lineNumbersRef}
             className="select-none overflow-hidden border-r border-gray-200 bg-gray-50 px-2 py-8 text-right font-mono text-sm leading-relaxed text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500"
-            style={{ 
+            style={{
               width: '3.5rem',
-              lineHeight: '1.625' // Match leading-relaxed
+              lineHeight: '1.625',
+              direction: 'ltr',
             }}
             aria-hidden="true"
           >
             {lineNumbers.map((num) => (
-              <div key={num} style={{ height: '1.625rem' }}>{num}</div>
+              <div key={num} style={{ height: '1.625rem' }}>
+                {num}
+              </div>
             ))}
           </div>
         )}
+
         <textarea
           ref={textareaRef}
           value={value}
+          dir={editorDir}
           onChange={handleChange}
           onSelect={handleSelect}
           onClick={handleSelect}
@@ -286,8 +356,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           onKeyDown={handleKeyDown}
           className={cn(
             'h-full flex-1 resize-none border-0 bg-transparent p-8 font-mono text-sm leading-relaxed text-gray-900 outline-none dark:text-gray-100',
+            editorDir === 'rtl' ? 'text-right direction-rtl' : 'text-left direction-ltr',
             className
           )}
+          style={{
+            unicodeBidi: 'isolate',
+          }}
           spellCheck={false}
           aria-label="Markdown editor"
           aria-multiline="true"

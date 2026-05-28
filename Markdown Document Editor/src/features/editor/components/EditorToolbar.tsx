@@ -43,6 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../../../app/components/ui/tooltip';
+import type { TextDirection } from '../../../lib/markdown/textDirection';
 
 interface ToolbarAction {
   id: string;
@@ -54,9 +55,13 @@ interface ToolbarAction {
 
 interface EditorToolbarProps {
   onAction: (action: string, data?: any) => void;
+  editorDirection?: TextDirection;
 }
 
-export function EditorToolbar({ onAction }: EditorToolbarProps) {
+export function EditorToolbar({
+  onAction,
+  editorDirection = 'rtl',
+}: EditorToolbarProps) {
   const headingActions: ToolbarAction[] = [
     {
       id: 'h1',
@@ -264,6 +269,8 @@ export function EditorToolbar({ onAction }: EditorToolbarProps) {
   const dropdownTriggerClassName =
     'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9';
 
+  const DirectionIcon = editorDirection === 'rtl' ? AlignRight : AlignLeft;
+
   return (
     <TooltipProvider>
       <div className="flex items-center gap-1 border-b bg-background px-3 py-2">
@@ -333,14 +340,19 @@ export function EditorToolbar({ onAction }: EditorToolbarProps) {
             className={dropdownTriggerClassName}
             onMouseDown={handleMouseDown}
           >
-            <AlignCenter className="h-4 w-4" />
-            <span>Direction</span>
+            <DirectionIcon className="h-4 w-4" />
+            <span>{editorDirection.toUpperCase()}</span>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="start" sideOffset={6}>
             {directionActions.map((action) => (
               <DropdownMenuItem
                 key={action.id}
+                className={
+                  editorDirection === action.id
+                    ? 'bg-accent text-accent-foreground'
+                    : undefined
+                }
                 onSelect={() => {
                   action.action();
                 }}

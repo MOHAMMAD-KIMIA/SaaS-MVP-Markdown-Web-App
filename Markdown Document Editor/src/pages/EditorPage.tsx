@@ -34,6 +34,7 @@ import {
   insertInlineMath,
   setTextDirection,
 } from '../lib/markdown/actions';
+import type { TextDirection } from '../lib/markdown/textDirection';
 import { cn } from '../lib/utils/cn';
 
 export function EditorPage() {
@@ -44,11 +45,13 @@ export function EditorPage() {
   const activeDoc = getActiveDocument();
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const selectionRef = useRef({ start: 0, end: 0 });
-  const [cursorPosition, setCursorPosition] = useState<{ 
-    start: number; 
+  const [cursorPosition, setCursorPosition] = useState<{
+    start: number;
     end: number;
     timestamp?: number;
   } | null>(null);
+  const [currentEditorDirection, setCurrentEditorDirection] =
+    useState<TextDirection>('rtl');
 
   const handleEditorChange = (value: string) => {
     if (activeDoc) {
@@ -128,23 +131,19 @@ export function EditorPage() {
           result = setTextDirection(content, start, end, data);
         }
         break;
-
       default:
         return;
     }
 
     if (result) {
-      // Update content
       updateDocumentContent(activeDoc.id, result.newText);
-      
-      // Set cursor position with a unique timestamp to force re-render
-      setCursorPosition({ 
-        start: result.newSelection.start, 
+
+      setCursorPosition({
+        start: result.newSelection.start,
         end: result.newSelection.end,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
-      // Clear cursor position after restoration completes
+
       setTimeout(() => setCursorPosition(null), 200);
     }
   };
@@ -168,7 +167,6 @@ export function EditorPage() {
   }, [activeDoc]);
 
   useEffect(() => {
-    // Focus editor when in markdown or split mode
     const isEditorVisible = editorMode === 'markdown' || editorMode === 'split';
     if (isEditorVisible && editorRef.current) {
       editorRef.current.focus();
@@ -186,7 +184,12 @@ export function EditorPage() {
         {!focusMode && isLeftSidebarOpen && <DocumentSidebar />}
 
         <div className="flex flex-1 flex-col">
-          {!focusMode && <EditorToolbar onAction={handleToolbarAction} />}
+          {!focusMode && (
+            <EditorToolbar
+              onAction={handleToolbarAction}
+              editorDirection={currentEditorDirection}
+            />
+          )}
 
           <div className="flex flex-1 overflow-hidden">
             {showEditor && (
@@ -196,6 +199,7 @@ export function EditorPage() {
                   value={activeDoc?.content || ''}
                   onChange={handleEditorChange}
                   onSelectionChange={handleSelectionChange}
+                  onDirectionChange={setCurrentEditorDirection}
                   cursorPosition={cursorPosition}
                   className="h-full"
                 />

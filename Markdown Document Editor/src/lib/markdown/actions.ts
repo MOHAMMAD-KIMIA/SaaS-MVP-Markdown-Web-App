@@ -596,3 +596,43 @@ end: Math.max(0, selectionEnd - totalRemoved),
 },
   };
 }
+
+export function insertPageBreak(
+  text: string,
+  start: number,
+  end: number
+): InsertResult {
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+
+  const leading =
+    before.length === 0
+      ? ''
+      : before.endsWith('\n\n')
+        ? ''
+        : before.endsWith('\n')
+          ? '\n'
+          : '\n\n';
+
+  const trailing =
+    after.length === 0
+      ? ''
+      : after.startsWith('\n\n')
+        ? ''
+        : after.startsWith('\n')
+          ? '\n'
+          : '\n\n';
+
+  const insertText = `${leading}<--page-break-->${trailing}`;
+  const newText = before + insertText + after;
+  const cursorPosition = before.length + insertText.length;
+
+  return {
+    newText,
+    newSelection: {
+      start: cursorPosition,
+      end: cursorPosition,
+    },
+  };
+}
+

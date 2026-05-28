@@ -27,7 +27,7 @@ import {
   Diff,
   AlignLeft,
   AlignRight,
-  AlignCenter,
+  ScissorsLineDashed,
 } from 'lucide-react';
 import { Button } from '../../../app/components/ui/button';
 import { Separator } from '../../../app/components/ui/separator';
@@ -240,6 +240,12 @@ export function EditorToolbar({
       action: () => onAction('horizontalRule'),
     },
     {
+      id: 'pageBreak',
+      label: 'Page Break',
+      icon: <ScissorsLineDashed className="h-4 w-4" />,
+      action: () => onAction('pageBreak'),
+    },
+    {
       id: 'mermaid',
       label: 'Mermaid Diagram',
       icon: <Network className="h-4 w-4" />,
@@ -285,12 +291,7 @@ export function EditorToolbar({
 
           <DropdownMenuContent align="start" sideOffset={6}>
             {headingActions.map((action) => (
-              <DropdownMenuItem
-                key={action.id}
-                onSelect={() => {
-                  action.action();
-                }}
-              >
+              <DropdownMenuItem key={action.id} onSelect={action.action}>
                 {action.icon}
                 <span>{action.label}</span>
               </DropdownMenuItem>
@@ -353,9 +354,7 @@ export function EditorToolbar({
                     ? 'bg-accent text-accent-foreground'
                     : undefined
                 }
-                onSelect={() => {
-                  action.action();
-                }}
+                onSelect={action.action}
               >
                 {action.icon}
                 <span>{action.label}</span>
@@ -377,12 +376,7 @@ export function EditorToolbar({
 
           <DropdownMenuContent align="start" sideOffset={6}>
             {customBlockActions.map((action) => (
-              <DropdownMenuItem
-                key={action.id}
-                onSelect={() => {
-                  action.action();
-                }}
-              >
+              <DropdownMenuItem key={action.id} onSelect={action.action}>
                 {action.icon}
                 <span>{action.label}</span>
               </DropdownMenuItem>

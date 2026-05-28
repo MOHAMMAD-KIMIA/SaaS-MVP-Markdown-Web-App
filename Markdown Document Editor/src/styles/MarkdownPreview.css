@@ -390,3 +390,35 @@
   text-align: left;
 }
 
+.page-break {
+  position: relative;
+  margin: 32px 0;
+  height: 0;
+  border-top: 2px dashed #999;
+}
+
+.page-break::after {
+  content: "Page Break";
+  position: absolute;
+  top: -10px;
+  right: 0;
+  background: white;
+  color: #666;
+  font-size: 12px;
+  padding: 0 6px;
+}
+
+@media print {
+  .page-break {
+    break-before: page;
+    page-break-before: always;
+    border: 0;
+    margin: 0;
+    height: 0;
+  }
+
+  .page-break::after {
+    content: "";
+    display: none;
+  }
+}

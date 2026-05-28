@@ -78,6 +78,14 @@ export function preprocessMarkdown(content: string): string {
 
   processed = parseWikiLinks(processed);
   processed = parseCustomBlocks(processed);
+  processed = parsePageBreaks(processed);
 
   return processed;
+}
+
+function parsePageBreaks(content: string): string {
+  return content.replace(
+    /^\s*<--page-break-->\s*$/gm,
+    '\n<div class="page-break"></div>\n'
+  );
 }

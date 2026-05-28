@@ -5,7 +5,7 @@ import remarkMath from 'remark-math';
 import remarkDirective from 'remark-directive';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
-import { visit , SKIP} from 'unist-util-visit';
+import { visit } from 'unist-util-visit';
 
 import 'katex/dist/katex.min.css';
 import '../../../styles/MarkdownPreview.css';
@@ -68,7 +68,6 @@ function withAutoDirection(
  * :rtl[متن فارسی]
  * :ltr[English text]
  */
-
 function remarkDirectionDirective() {
   return (tree: any) => {
     visit(tree, (node: any, index?: number, parent?: any) => {
@@ -92,7 +91,7 @@ function remarkDirectionDirective() {
           }
         );
 
-        return [SKIP, index + node.children.length + 2];
+        return;
       }
 
       if (
@@ -110,7 +109,10 @@ function remarkDirectionDirective() {
   };
 }
 
-export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
+export function MarkdownPreview({
+  content,
+  className,
+}: MarkdownPreviewProps) {
   const processedContent = preprocessMarkdown(content);
 
   return (

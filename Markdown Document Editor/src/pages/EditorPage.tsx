@@ -27,13 +27,15 @@ import {
   insertNumberedList,
   insertTaskList,
   insertTable,
-  insertHorizontalRule,
+  insertHorizontalRule, 
   insertMermaidBlock,
   insertCustomBlock,
   insertMathBlock,
   insertInlineMath,
+  insertPageBreak,
   setTextDirection,
 } from '../lib/markdown/actions';
+
 import type { TextDirection } from '../lib/markdown/textDirection';
 import { cn } from '../lib/utils/cn';
 
@@ -113,6 +115,9 @@ export function EditorPage() {
         break;
       case 'horizontalRule':
         result = insertHorizontalRule(content, start, end);
+        break;
+      case 'pageBreak':
+        result = insertPageBreak(content, start, end);
         break;
       case 'mermaid':
         result = insertMermaidBlock(content, start, end);

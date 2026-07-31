@@ -59,7 +59,7 @@ export interface TypographySettings {
   lineHeight: number;
 }
 
-export type AutoSaveInterval = 'keystroke' | 5 | 10 | 30 | 60;
+export type AutoSaveInterval = 'keystroke' | 5 | 10 | 30 | 60 | 120 | 300 | 600;
 
 export interface AutoSaveSettings {
   enabled: boolean;

@@ -4,7 +4,6 @@ import { useDocumentStore } from '../stores/documentStore';
 import { useEditorStore } from '../stores/editorStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useHistoryStore } from '../stores/historyStore';
-import { WindowsTitlebar } from '../components/desktop/WindowsTitlebar';
 import { DesktopMenuBar } from '../components/desktop/DesktopMenuBar';
 import { DesktopAppNav } from '../components/desktop/DesktopAppNav';
 import { DesktopDashboard } from '../components/desktop/views/DesktopDashboard';
@@ -54,7 +53,6 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground font-sans overflow-hidden select-none">
-      {!focusMode && <WindowsTitlebar />}
       {!focusMode && <DesktopMenuBar currentView={currentView} onNavigate={setCurrentView} />}
       
       <div className="flex-1 flex overflow-hidden">

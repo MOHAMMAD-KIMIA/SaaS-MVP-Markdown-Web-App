@@ -20,6 +20,9 @@ const intervals: { value: AutoSaveInterval; label: string }[] = [
   { value: 10, label: 'Every 10 seconds' },
   { value: 30, label: 'Every 30 seconds (Default)' },
   { value: 60, label: 'Every 1 minute' },
+  { value: 120, label: 'Every 2 minutes' },
+  { value: 300, label: 'Every 5 minutes' },
+  { value: 600, label: 'Every 10 minutes' },
 ];
 
 export function AutoSaveSettings() {
@@ -73,8 +76,9 @@ export function AutoSaveSettings() {
             value={String(autoSave?.interval ?? 30)}
             onValueChange={(val) => {
               const interval: AutoSaveInterval = val === 'keystroke' ? 'keystroke' : (Number(val) as AutoSaveInterval);
+              const selectedOption = intervals.find((i) => String(i.value) === val);
               updateAutoSave({ interval });
-              desktop.showNotification('Auto-Save Updated', `Sync mode set to: ${val === 'keystroke' ? 'Every keystroke' : `Every ${val}s`}`);
+              desktop.showNotification('Auto-Save Updated', `Sync mode set to: ${selectedOption?.label || val}`);
             }}
           >
             <SelectTrigger id="auto-save-interval">

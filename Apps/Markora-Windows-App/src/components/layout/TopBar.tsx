@@ -101,9 +101,16 @@ export function TopBar() {
                 ● Auto-saved (Keystroke)
               </span>
             ) : (
-              <span className="text-amber-500 flex items-center gap-1 font-medium" title={autoSave?.enabled ? `Auto-saving to storage every ${autoSave.interval}s` : 'Unsaved changes'}>
-                ● Modified {autoSave?.enabled && `(Syncing every ${autoSave.interval}s)`}
-              </span>
+              (() => {
+                const intervalText = typeof autoSave?.interval === 'number'
+                  ? (autoSave.interval >= 60 ? `${autoSave.interval / 60} min` : `${autoSave.interval}s`)
+                  : 'keystroke';
+                return (
+                  <span className="text-amber-500 flex items-center gap-1 font-medium" title={autoSave?.enabled ? `Auto-saving to storage every ${intervalText}` : 'Unsaved changes'}>
+                    ● Modified {autoSave?.enabled && `(Syncing every ${intervalText})`}
+                  </span>
+                );
+              })()
             )
           ) : (
             <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium" title="All changes saved to local storage">

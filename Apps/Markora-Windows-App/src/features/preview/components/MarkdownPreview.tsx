@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import remarkMath from 'remark-math';
 import remarkDirective from 'remark-directive';
 import rehypeKatex from 'rehype-katex';
@@ -32,23 +33,110 @@ function getNodeText(node: any): string {
   return node.children.map(getNodeText).join('');
 }
 
+function extractTextFromReactNode(node: React.ReactNode): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(extractTextFromReactNode).join('');
+  if (React.isValidElement(node) && node.props) {
+    return extractTextFromReactNode((node.props as any).children);
+  }
+  return '';
+}
+
+function renderParagraphChildren(
+  children: React.ReactNode,
+  fallbackDir: 'rtl' | 'ltr'
+): React.ReactNode {
+  const childArray = React.Children.toArray(children);
+  if (childArray.length === 0) return children;
+
+  const hasBreaks = childArray.some(
+    (child) => React.isValidElement(child) && child.type === 'br'
+  );
+
+  if (!hasBreaks) {
+    const text = extractTextFromReactNode(children);
+    const dir = detectTextDirection(text) ?? fallbackDir;
+    return (
+      <span
+        dir={dir}
+        className={cn('block w-full', dir === 'rtl' ? 'text-right' : 'text-left')}
+        style={{
+          direction: dir,
+          textAlign: dir === 'rtl' ? 'right' : 'left',
+          unicodeBidi: 'plaintext',
+        }}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  const lineGroups: React.ReactNode[][] = [[]];
+  for (const child of childArray) {
+    if (React.isValidElement(child) && child.type === 'br') {
+      lineGroups.push([]);
+    } else {
+      lineGroups[lineGroups.length - 1].push(child);
+    }
+  }
+
+  let currentDir = fallbackDir;
+  const renderedLines: React.ReactNode[] = [];
+
+  lineGroups.forEach((groupItems, idx) => {
+    const text = extractTextFromReactNode(groupItems);
+    const detected = detectTextDirection(text);
+    if (detected) {
+      currentDir = detected;
+    }
+
+    const lineDir = currentDir;
+
+    renderedLines.push(
+      <span
+        key={`line-${idx}`}
+        dir={lineDir}
+        className={cn(
+          'block w-full',
+          lineDir === 'rtl' ? 'text-right' : 'text-left'
+        )}
+        style={{
+          direction: lineDir,
+          textAlign: lineDir === 'rtl' ? 'right' : 'left',
+          unicodeBidi: 'plaintext',
+        }}
+      >
+        {groupItems.length > 0 ? groupItems : '\u00A0'}
+      </span>
+    );
+  });
+
+  return renderedLines;
+}
+
 function withAutoDirection(
   Tag: React.ElementType,
-  fallback: 'rtl' | 'ltr' = 'rtl'
+  fallback: 'rtl' | 'ltr' = 'ltr'
 ) {
   return function DirectedComponent(props: any) {
-    const { node, children, className, ...rest } = props;
+    const { node, children, className, style, ...rest } = props;
     const text = getNodeText(node);
-    const dir = detectTextDirection(text) ?? fallback;
+    const blockDir = detectTextDirection(text) ?? fallback;
 
     return React.createElement(
       Tag,
       {
         ...rest,
-        dir,
-        className: cn(`auto-dir auto-dir-${dir}`, className),
+        dir: 'auto',
+        className: cn(`auto-dir auto-dir-${blockDir}`, className),
+        style: {
+          unicodeBidi: 'plaintext',
+          textAlign: 'start',
+          ...style,
+        },
       },
-      children
+      renderParagraphChildren(children, blockDir)
     );
   };
 }
@@ -96,6 +184,7 @@ function remarkDirectionDirective() {
 
 const REMARK_PLUGINS = [
   remarkGfm,
+  remarkBreaks,
   remarkMath,
   remarkDirective,
   remarkDirectionDirective,
@@ -117,7 +206,7 @@ const COMPONENTS_MAP = {
 
   th({ children, node, className, ...props }: any) {
     const text = getNodeText(node);
-    const dir = detectTextDirection(text) ?? 'rtl';
+    const dir = detectTextDirection(text) ?? 'ltr';
 
     return (
       <th
@@ -132,7 +221,7 @@ const COMPONENTS_MAP = {
 
   td({ children, node, className, ...props }: any) {
     const text = getNodeText(node);
-    const dir = detectTextDirection(text) ?? 'rtl';
+    const dir = detectTextDirection(text) ?? 'ltr';
 
     return (
       <td
@@ -170,16 +259,8 @@ const COMPONENTS_MAP = {
     return <CodeBlock code={codeString} language={language} />;
   },
 
-  pre({ children, className, ...props }: any) {
-    return (
-      <pre
-        dir="ltr"
-        className={cn('force-ltr', className)}
-        {...props}
-      >
-        {children}
-      </pre>
-    );
+  pre({ children }: any) {
+    return <>{children}</>;
   },
 
   a({ children, href, ...props }: any) {
@@ -220,8 +301,8 @@ export const MarkdownPreview = React.memo(function MarkdownPreview({
   className,
   onScrollProgress,
 }: MarkdownPreviewProps) {
-  const processedContent = preprocessMarkdown(content);
   const typography = useSettingsStore((state) => state.typography);
+  const processedContent = preprocessMarkdown(content);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;

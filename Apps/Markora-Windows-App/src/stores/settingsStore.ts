@@ -52,6 +52,8 @@ const defaultSettings: AppSettings = {
   editor: {
     syntaxHighlighting: true,
     formatOnSave: true,
+    defaultTextDirection: 'ltr',
+    autoDetectTextDirection: true,
   },
 };
 

@@ -66,9 +66,13 @@ export interface AutoSaveSettings {
   interval: AutoSaveInterval;
 }
 
+import { TextDirection } from '../lib/markdown/textDirection';
+
 export interface EditorSettings {
   syntaxHighlighting: boolean;
   formatOnSave: boolean;
+  defaultTextDirection?: TextDirection;
+  autoDetectTextDirection?: boolean;
 }
 
 export interface AppSettings {

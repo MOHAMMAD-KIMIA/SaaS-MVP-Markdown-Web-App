@@ -60,7 +60,7 @@ interface EditorToolbarProps {
 
 export function EditorToolbar({
   onAction,
-  editorDirection = 'rtl',
+  editorDirection = 'ltr',
 }: EditorToolbarProps) {
   const headingActions: ToolbarAction[] = [
     {

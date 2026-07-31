@@ -5,6 +5,7 @@ import { getCurrentTimestamp } from '../lib/utils/dates';
 import { loadFromLocalStorage, saveToLocalStorage } from '../lib/storage/localStorage';
 import { useSettingsStore } from './settingsStore';
 import { formatMarkdown } from '../lib/markdown/formatting';
+import { useOfflineSyncStore } from './offlineSyncStore';
 
 interface DocumentStore {
   documents: Document[];
@@ -51,6 +52,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       activeDocumentId: id,
     }));
 
+    useOfflineSyncStore.getState().enqueueChange(id, 'CREATE', newDocument);
     get().saveToStorage();
     return id;
   },
@@ -61,13 +63,20 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   },
 
   renameDocument: (id: string, title: string) => {
+    let updatedDoc: Document | undefined;
     set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id
-          ? { ...doc, title, updatedAt: getCurrentTimestamp() }
-          : doc
-      ),
+      documents: state.documents.map((doc) => {
+        if (doc.id === id) {
+          updatedDoc = { ...doc, title, updatedAt: getCurrentTimestamp() };
+          return updatedDoc;
+        }
+        return doc;
+      }),
     }));
+
+    if (updatedDoc) {
+      useOfflineSyncStore.getState().enqueueChange(id, 'UPDATE', updatedDoc);
+    }
     get().saveToStorage();
   },
 
@@ -95,6 +104,8 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         activeDocumentId: newActiveId,
       };
     });
+
+    useOfflineSyncStore.getState().enqueueChange(id, 'DELETE', { id });
     get().saveToStorage();
   },
 
@@ -117,22 +128,31 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       documents: [...state.documents, duplicated],
       activeDocumentId: newId,
     }));
+
+    useOfflineSyncStore.getState().enqueueChange(newId, 'CREATE', duplicated);
     get().saveToStorage();
   },
 
   updateDocumentContent: (id: string, content: string) => {
+    let updatedDoc: Document | undefined;
     set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id
-          ? {
-              ...doc,
-              content,
-              updatedAt: getCurrentTimestamp(),
-              isDirty: true,
-            }
-          : doc
-      ),
+      documents: state.documents.map((doc) => {
+        if (doc.id === id) {
+          updatedDoc = {
+            ...doc,
+            content,
+            updatedAt: getCurrentTimestamp(),
+            isDirty: true,
+          };
+          return updatedDoc;
+        }
+        return doc;
+      }),
     }));
+
+    if (updatedDoc) {
+      useOfflineSyncStore.getState().enqueueChange(id, 'UPDATE', updatedDoc);
+    }
 
     const { autoSave } = useSettingsStore.getState();
     if (autoSave?.enabled && autoSave?.interval === 'keystroke') {

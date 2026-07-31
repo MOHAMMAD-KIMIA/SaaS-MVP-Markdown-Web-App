@@ -3,6 +3,7 @@ import { useDocumentStore } from '../../../stores/documentStore';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { FileText, Type, Hash, Clock, Wand2, Check, CircleDot, Target } from 'lucide-react';
 import { desktop } from '../../../lib/desktop/bridge';
+import { OfflineSyncStatus } from '../../../components/offline/OfflineSyncStatus';
 
 interface EditorStatusBarProps {
   cursorPosition?: {
@@ -86,6 +87,8 @@ export function EditorStatusBar({ cursorPosition }: EditorStatusBarProps) {
       </div>
 
       <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
+        <OfflineSyncStatus />
+
         <button
           onClick={handleFormat}
           className="flex items-center space-x-1 rounded px-2 py-0.5 font-medium text-foreground/80 hover:bg-muted hover:text-foreground transition-colors border border-transparent hover:border-border/60"

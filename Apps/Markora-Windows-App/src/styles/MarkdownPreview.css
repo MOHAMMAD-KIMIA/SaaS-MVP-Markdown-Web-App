@@ -305,14 +305,19 @@
   text-align: left;
 }
 
+.auto-dir {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
 .auto-dir-rtl {
-  direction: rtl;
-  text-align: right;
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .auto-dir-ltr {
-  direction: ltr;
-  text-align: left;
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .markdown-direction {

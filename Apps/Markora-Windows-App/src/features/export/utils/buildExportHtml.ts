@@ -3,6 +3,7 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
@@ -31,6 +32,7 @@ async function markdownToHtml(markdown: string): Promise<string> {
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkBreaks)
     .use(remarkMath)
     .use(remarkRehype, {
       allowDangerousHtml: true,
@@ -119,6 +121,19 @@ export async function buildExportHtml(
       margin-top: 1.5em;
       margin-bottom: 0.6em;
       font-weight: 700;
+    }
+
+    .export-document p,
+    .export-document h1,
+    .export-document h2,
+    .export-document h3,
+    .export-document h4,
+    .export-document h5,
+    .export-document h6,
+    .export-document li,
+    .export-document blockquote {
+      unicode-bidi: plaintext;
+      text-align: start;
     }
 
     .export-document p {

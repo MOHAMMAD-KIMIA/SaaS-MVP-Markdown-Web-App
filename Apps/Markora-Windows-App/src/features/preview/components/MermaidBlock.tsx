@@ -13,59 +13,84 @@ const mermaidSvgCache = new Map<string, string>();
 export const MermaidBlock = React.memo(function MermaidBlock({ code }: MermaidBlockProps) {
   const [svg, setSvg] = useState<string>(() => mermaidSvgCache.get(code) || '');
   const [error, setError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(!mermaidSvgCache.has(code));
 
   useEffect(() => {
+    const trimmed = code?.trim() || '';
+    if (!trimmed) {
+      setSvg('');
+      setError('');
+      setIsLoading(false);
+      return;
+    }
+
     if (mermaidSvgCache.has(code)) {
       setSvg(mermaidSvgCache.get(code)!);
+      setError('');
+      setIsLoading(false);
       return;
     }
 
     let isMounted = true;
+    setIsLoading(true);
+
     const render = async () => {
       try {
         if (isMounted) setError('');
-        const uniqueId = `mermaid-${generateId().replace(/[^a-zA-Z0-9]/g, '')}`;
+        const uniqueId = generateId().replace(/[^a-zA-Z0-9]/g, '');
         const renderedSvg = await renderMermaid(code, uniqueId);
         if (isMounted) {
           mermaidSvgCache.set(code, renderedSvg);
           setSvg(renderedSvg);
+          setIsLoading(false);
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to render diagram');
+          setError(err instanceof Error ? err.message : 'Syntax error in Mermaid diagram');
           setSvg('');
+          setIsLoading(false);
         }
       }
     };
 
-    render();
+    const timer = setTimeout(() => {
+      render();
+    }, 150);
+
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
   }, [code]);
 
   if (error) {
     return (
-      <Alert variant="destructive" className="my-4">
+      <Alert variant="destructive" className="my-4 force-ltr" dir="ltr">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Mermaid Diagram Error</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
+        <AlertTitle>Mermaid Diagram Syntax Error</AlertTitle>
+        <AlertDescription className="font-mono text-xs whitespace-pre-wrap">{error}</AlertDescription>
       </Alert>
     );
   }
 
-  if (!svg) {
+  if (isLoading && !svg) {
     return (
-      <div className="my-4 flex items-center justify-center rounded-lg border bg-muted p-8">
-        <p className="text-sm text-muted-foreground">Rendering diagram...</p>
+      <div className="my-4 flex items-center justify-center rounded-lg border bg-muted/50 p-6 force-ltr" dir="ltr">
+        <p className="text-sm text-muted-foreground animate-pulse">Rendering diagram...</p>
       </div>
     );
   }
 
+  if (!svg) {
+    return null;
+  }
+
   return (
     <div
-      className="my-4 flex items-center justify-center rounded-lg border bg-muted p-4 overflow-x-auto"
+      className="my-4 flex items-center justify-center rounded-lg border bg-card p-4 overflow-x-auto force-ltr"
+      dir="ltr"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
 });
+

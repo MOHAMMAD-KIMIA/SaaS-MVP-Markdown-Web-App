@@ -96,7 +96,7 @@ export function EditorPage() {
   const hoveredPaneRef = useRef<'editor' | 'preview' | null>('editor');
 
   const [currentEditorDirection, setCurrentEditorDirection] =
-    useState<TextDirection>('rtl');
+    useState<TextDirection>('ltr');
 
   useEffect(() => {
     progressBarRef.current?.setProgress(0);

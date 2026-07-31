@@ -1,7 +1,7 @@
 export type TextDirection = 'rtl' | 'ltr';
 
-const RTL_CHAR_REGEX = /[\p{Script=Arabic}\p{Script=Hebrew}]/u;
-const LTR_CHAR_REGEX = /[\p{Script=Latin}]/u;
+const RTL_CHAR_REGEX = /[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}\p{Script=Samaritan}\p{Script=Mandaic}]/u;
+const LTR_CHAR_REGEX = /[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}\p{Script=Devanagari}\p{Script=Bengali}]/u;
 
 export function stripMarkdownPrefix(line: string): string {
   let value = line ?? '';
@@ -31,6 +31,10 @@ export function stripMarkdownPrefix(line: string): string {
 }
 
 export function detectTextDirection(input: string): TextDirection | null {
+  // Check explicit Unicode direction marks first
+  if (input.includes('\u2067') || input.includes('\u200F')) return 'rtl';
+  if (input.includes('\u2066') || input.includes('\u200E')) return 'ltr';
+
   const value = stripMarkdownPrefix(input);
 
   if (!value) return null;
@@ -57,13 +61,73 @@ export function getLineAtPosition(text: string, position: number): string {
   return text.slice(start, end);
 }
 
+export function getBlockDirectionAtPosition(
+  text: string,
+  position: number
+): TextDirection | null {
+  const safePos = Math.max(0, Math.min(position, text.length));
+  const before = text.slice(0, safePos);
+  const lines = before.split('\n');
+
+  let currentBlockDir: TextDirection | null = null;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === ':::rtl') {
+      currentBlockDir = 'rtl';
+    } else if (trimmed === ':::ltr') {
+      currentBlockDir = 'ltr';
+    } else if (trimmed === ':::' && currentBlockDir !== null) {
+      currentBlockDir = null;
+    }
+  }
+  return currentBlockDir;
+}
+
+export function getPreviousNonEmptyLineDirection(
+  text: string,
+  caretPosition: number,
+  fallback: TextDirection = 'ltr'
+): TextDirection {
+  const safePos = Math.max(0, Math.min(caretPosition, text.length));
+  const before = text.slice(0, safePos);
+  const lines = before.split('\n');
+
+  // Search backwards from the line before current line
+  for (let i = lines.length - 2; i >= 0; i--) {
+    const line = lines[i];
+    const dir = detectTextDirection(line);
+    if (dir) return dir;
+  }
+
+  return fallback;
+}
+
 export function getCurrentLineDirection(
   text: string,
   caretPosition: number,
-  fallback: TextDirection = 'rtl'
+  fallback: TextDirection = 'ltr',
+  autoDetect: boolean = true
 ): TextDirection {
+  // 1. Check container blocks (:::rtl / :::ltr)
+  const blockDir = getBlockDirectionAtPosition(text, caretPosition);
+  if (blockDir) return blockDir;
+
   const line = getLineAtPosition(text, caretPosition);
-  return detectTextDirection(line) ?? fallback;
+
+  // 2. If auto-detection is enabled, check current line or maintain previous line's direction on new line events
+  if (autoDetect) {
+    const lineDir = detectTextDirection(line);
+    if (lineDir) return lineDir;
+
+    // For an empty or neutral new line (e.g. after Enter key), maintain active direction from previous paragraph/line
+    return getPreviousNonEmptyLineDirection(text, caretPosition, fallback);
+  }
+
+  // 3. If auto-detection is disabled, check explicit line Unicode marks or use default fallback setting
+  if (line.includes('\u2067') || line.includes('\u200F')) return 'rtl';
+  if (line.includes('\u2066') || line.includes('\u200E')) return 'ltr';
+
+  return fallback;
 }
 
 export function isCaretInsideCodeOrMath(

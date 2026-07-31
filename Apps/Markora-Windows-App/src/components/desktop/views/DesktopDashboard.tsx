@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   FileText, HardDrive, Clock, Plus, FolderOpen, Download, Trash2, 
   ArrowUpRight, CheckCircle2, Cloud, Cpu, Sparkles, BookOpen, Share2,
-  MoreVertical, Copy, Edit2, FileCode, Check
+  MoreVertical, Copy, Edit2, FileCode, Check, UploadCloud
 } from 'lucide-react';
 import { useDocumentStore } from '../../../stores/documentStore';
 import { desktop } from '../../../lib/desktop/bridge';
@@ -15,6 +15,7 @@ import { exportToHtml } from '../../../features/export/utils/exportHtml';
 import { buildExportHtml } from '../../../features/export/utils/buildExportHtml';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { copyToClipboard } from '../../../lib/utils/clipboard';
+import { cn } from '../../../lib/utils/cn';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +49,71 @@ export function DesktopDashboard({ onNavigate }: DesktopDashboardProps) {
   const [renamingDoc, setRenamingDoc] = useState<{ id: string; title: string } | null>(null);
   const [deletingDoc, setDeletingDoc] = useState<{ id: string; title: string } | null>(null);
   const [newTitle, setNewTitle] = useState('');
+
+  // Drag and drop state
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      setIsDragging(false);
+      dragCounter.current = 0;
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    let lastId: string | null = null;
+    let importedCount = 0;
+
+    for (const file of files) {
+      try {
+        const content = await file.text();
+        const title = file.name || 'Imported Document.md';
+        const id = createDocument(title);
+        useDocumentStore.getState().updateDocumentContent(id, content);
+        lastId = id;
+        importedCount++;
+      } catch (err) {
+        console.error('Failed to read dropped file:', err);
+      }
+    }
+
+    if (lastId) {
+      openDocument(lastId);
+      onNavigate('editor');
+      desktop.showNotification(
+        'Document Opened',
+        importedCount === 1
+          ? `Opened "${files[0].name}" directly in editor.`
+          : `Imported and opened ${importedCount} markdown documents.`
+      );
+    }
+  };
 
   const handleRename = (id: string, currentTitle: string) => {
     setRenamingDoc({ id, title: currentTitle });
@@ -110,7 +176,26 @@ export function DesktopDashboard({ onNavigate }: DesktopDashboardProps) {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8 text-foreground select-none animate-in fade-in duration-200">
+    <div
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="relative p-8 max-w-6xl mx-auto space-y-8 text-foreground select-none animate-in fade-in duration-200"
+    >
+      {/* Full Screen Drag & Drop Visual Overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 bg-background/85 backdrop-blur-md flex flex-col items-center justify-center border-4 border-dashed border-indigo-500 m-4 rounded-2xl animate-in fade-in zoom-in-95 duration-150 pointer-events-none shadow-2xl">
+          <div className="p-6 rounded-full bg-indigo-500/20 text-indigo-500 dark:text-indigo-400 mb-4 animate-bounce border border-indigo-500/30">
+            <UploadCloud className="w-12 h-12" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">Drop Markdown Files Here</h2>
+          <p className="text-sm text-muted-foreground mt-1.5 font-medium max-w-sm text-center">
+            Release to automatically import and open your files directly into the editor.
+          </p>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-card via-muted/40 to-card border border-primary/30 shadow-xl backdrop-blur-sm">
         <div className="space-y-1">
@@ -143,6 +228,28 @@ export function DesktopDashboard({ onNavigate }: DesktopDashboardProps) {
             <span>New Document</span>
           </button>
         </div>
+      </div>
+
+      {/* Interactive Drag & Drop Zone */}
+      <div
+        onClick={handleOpenFromDisk}
+        className={cn(
+          "relative overflow-hidden p-6 rounded-2xl border-2 border-dashed transition-all text-center flex flex-col items-center justify-center cursor-pointer group shadow-sm",
+          isDragging 
+            ? "border-indigo-500 bg-indigo-500/10 scale-[1.01] shadow-xl" 
+            : "border-border/80 bg-card/40 hover:bg-card/70 hover:border-indigo-500/50"
+        )}
+      >
+        <div className="p-3 rounded-full bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 group-hover:scale-110 transition-transform mb-2 border border-indigo-500/20">
+          <UploadCloud className="w-6 h-6" />
+        </div>
+        <h3 className="font-semibold text-sm text-foreground flex items-center space-x-1.5">
+          <span>Drag & Drop Markdown Files Here</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-mono font-normal">or click to browse</span>
+        </h3>
+        <p className="text-xs text-muted-foreground mt-1 max-w-md">
+          Drop any <code className="text-xs font-mono bg-muted/80 text-foreground px-1.5 py-0.5 rounded border border-border/50">.md</code>, <code className="text-xs font-mono bg-muted/80 text-foreground px-1.5 py-0.5 rounded border border-border/50">.markdown</code>, or <code className="text-xs font-mono bg-muted/80 text-foreground px-1.5 py-0.5 rounded border border-border/50">.txt</code> file directly onto the dashboard to open in editor view.
+        </p>
       </div>
 
       {/* Metrics Grid */}

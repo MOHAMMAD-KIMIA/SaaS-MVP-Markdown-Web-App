@@ -50,6 +50,17 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
   ) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const lineNumbersRef = useRef<HTMLDivElement>(null);
+    const pendingCursorRef = useRef<{ start: number; end: number } | null>(null);
+    const lastTimestampRef = useRef<number | undefined>(undefined);
+    const isEnterKeyDownRef = useRef<boolean>(false);
+    const prevLineCountRef = useRef<number>(value.split('\n').length);
+    const prevValueRef = useRef<string>(value);
+
+    const { editor: editorSettings, typography } = useSettingsStore();
+    const defaultDir = editorSettings?.defaultTextDirection ?? 'ltr';
+    const autoDetect = editorSettings?.autoDetectTextDirection ?? true;
+
+    const [editorDir, setEditorDir] = useState<TextDirection>(defaultDir);
 
     const handleScrollTextarea = (e: React.UIEvent<HTMLTextAreaElement>) => {
       const target = e.currentTarget;
@@ -60,19 +71,18 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
       const progress = maxScroll > 0 ? (target.scrollTop / maxScroll) * 100 : 0;
       onScrollProgress?.(Math.min(100, Math.max(0, progress)));
     };
-    const pendingCursorRef = useRef<{ start: number; end: number } | null>(null);
-    const lastTimestampRef = useRef<number | undefined>(undefined);
-    const [editorDir, setEditorDir] = useState<TextDirection>('rtl');
 
     const applyDirection = (dir: TextDirection) => {
-      setEditorDir(dir);
+      if (dir !== editorDir) {
+        setEditorDir(dir);
+      }
       onDirectionChange?.(dir);
     };
 
     const updateDirection = (text: string, caretPosition: number) => {
       const nextDir: TextDirection = isCaretInsideCodeOrMath(text, caretPosition)
         ? 'ltr'
-        : getCurrentLineDirection(text, caretPosition, 'rtl');
+        : getCurrentLineDirection(text, caretPosition, defaultDir, autoDetect);
 
       applyDirection(nextDir);
     };
@@ -154,8 +164,22 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
       if (!textarea) return;
 
       const caret = textarea.selectionStart ?? 0;
-      updateDirection(value, caret);
-    }, [value]);
+      const currentLineCount = value.split('\n').length;
+      const isNewLineCreated = currentLineCount > prevLineCountRef.current || isEnterKeyDownRef.current;
+
+      if (isNewLineCreated) {
+        // Upon creation of a new line via Enter or value update,
+        // update direction (inherits preceding line's direction if neutral/empty,
+        // or auto-detects if a new language character is present).
+        updateDirection(value, caret);
+        isEnterKeyDownRef.current = false;
+      } else {
+        updateDirection(value, caret);
+      }
+
+      prevValueRef.current = value;
+      prevLineCountRef.current = currentLineCount;
+    }, [value, defaultDir, autoDetect]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
@@ -271,10 +295,12 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
         return;
       }
 
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        isEnterKeyDownRef.current = true;
         const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
         const lineText = value.substring(lineStart, selectionStart);
-        const indent = lineText.match(/^\s*/)?.[0] || '';
+        const indentMatch = lineText.match(/^(\s+)/);
+        const indent = indentMatch ? indentMatch[1] : '';
 
         const listMatch = lineText.match(/^(\s*)([-*+]|\d+\.)\s/);
 
@@ -336,7 +362,6 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
 
     const lineCount = value.split('\n').length;
     const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
-    const typography = useSettingsStore((state) => state.typography);
     const lineNumHeight = `${Math.round(typography.fontSize * typography.lineHeight)}px`;
 
     return (
@@ -373,11 +398,10 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
           onScroll={handleScrollTextarea}
           className={cn(
             'h-full flex-1 resize-none border-0 bg-transparent p-8 font-mono text-sm leading-relaxed text-foreground outline-none',
-            editorDir === 'rtl' ? 'text-right direction-rtl' : 'text-left direction-ltr',
             className
           )}
           style={{
-            unicodeBidi: 'isolate',
+            unicodeBidi: 'plaintext',
             fontFamily: typography.fontFamily,
             fontSize: `${typography.fontSize}px`,
             lineHeight: typography.lineHeight,

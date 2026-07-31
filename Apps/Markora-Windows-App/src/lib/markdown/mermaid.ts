@@ -4,33 +4,49 @@ let isInitialized = false;
 
 export function initializeMermaid() {
   if (!isInitialized) {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: 'default',
-      securityLevel: 'loose',
-      fontFamily: 'inherit',
-      flowchart: {
-        htmlLabels: true,
-        useMaxWidth: true,
-      },
-      suppressErrorRendering: true,
-    });
-    isInitialized = true;
+    try {
+      const mermaidObj = (mermaid as any).default || mermaid;
+      mermaidObj.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        securityLevel: 'loose',
+        fontFamily: 'inherit',
+        flowchart: {
+          htmlLabels: true,
+          useMaxWidth: true,
+        },
+        suppressErrorRendering: true,
+      });
+      isInitialized = true;
+    } catch (e) {
+      console.error('Failed to initialize Mermaid:', e);
+    }
   }
 }
 
 export async function renderMermaid(code: string, id: string): Promise<string> {
-  let cleanId = '';
+  const cleanCode = code ? code.trim() : '';
+  if (!cleanCode) {
+    return '';
+  }
+
+  const mermaidObj = (mermaid as any).default || mermaid;
+  initializeMermaid();
+
+  // Create a clean alphanumeric ID with no underscores or special characters
+  const cleanId = 'mermaid' + Math.random().toString(36).substring(2, 10);
+
   try {
-    initializeMermaid();
-    cleanId = 'm' + id.replace(/[^a-zA-Z0-9]/g, '') + '_' + Math.random().toString(36).substring(2, 8);
-    const { svg } = await mermaid.render(cleanId, code);
+    if (typeof mermaidObj.parse === 'function') {
+      await mermaidObj.parse(cleanCode);
+    }
+    const result = await mermaidObj.render(cleanId, cleanCode);
+    const svg = typeof result === 'string' ? result : result?.svg || '';
     return svg;
   } catch (error) {
     console.error('Mermaid rendering error:', error);
     throw error;
   } finally {
-    // Clean up temporary DOM elements created by mermaid if any lingered
     try {
       if (cleanId) {
         const lingering =
@@ -45,4 +61,5 @@ export async function renderMermaid(code: string, id: string): Promise<string> {
     }
   }
 }
+
 

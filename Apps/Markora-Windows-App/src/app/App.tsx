@@ -18,6 +18,7 @@ import { HistoryPanel } from '../features/history/components/HistoryPanel';
 import { SearchReplacePanel } from '../features/search/components/SearchReplacePanel';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { initializeOfflineSync } from '../lib/offline/syncManager';
 
 export default function App() {
   useAutoSave();
@@ -36,6 +37,7 @@ export default function App() {
     loadEditor();
     loadSettings();
     loadHistory();
+    initializeOfflineSync();
   }, [loadDocuments, loadEditor, loadSettings, loadHistory]);
 
   useEffect(() => {

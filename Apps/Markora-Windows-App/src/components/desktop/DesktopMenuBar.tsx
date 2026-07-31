@@ -18,6 +18,7 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
 import { exportToHtml } from '../../features/export/utils/exportHtml';
 import { buildExportHtml } from '../../features/export/utils/buildExportHtml';
+import { OfflineSyncStatus } from '../offline/OfflineSyncStatus';
 
 interface DesktopMenuBarProps {
   currentView: 'editor' | 'dashboard' | 'publishing' | 'account' | 'documentation';
@@ -256,6 +257,7 @@ export function DesktopMenuBar({ currentView, onNavigate }: DesktopMenuBarProps)
       </div>
 
       <div className="ml-auto flex items-center space-x-3 text-muted-foreground pr-2">
+        <OfflineSyncStatus />
         <span className="flex items-center space-x-1 px-2 py-0.5 rounded bg-muted text-[10px] text-foreground font-mono">
           <span>Ctrl+K</span>
           <span className="text-muted-foreground">Palette</span>

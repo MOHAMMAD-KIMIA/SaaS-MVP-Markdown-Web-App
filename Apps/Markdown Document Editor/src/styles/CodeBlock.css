@@ -1,0 +1,212 @@
+/* inline code */
+.inline-code {
+  background: #eef2f7;
+  color: #1e293b;
+  padding: 0.12rem 0.36rem;
+  border-radius: 6px;
+  border: 1px solid #d9e0e7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875em;
+}
+
+/* wrapper */
+.code-block-wrapper {
+  margin: 1.25rem 0;
+  border: 1px solid #d8dee6;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+/* header */
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.95rem;
+  background: #eef2f6 !important;
+  border-bottom: 1px solid #d8dee6;
+}
+
+.code-block-language {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* copy button */
+.code-block-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.34rem 0.72rem;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cfd8e3;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.code-block-copy-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #b8c4d2;
+}
+
+/* body */
+.code-block-body {
+  background: #f8fafc !important;
+  overflow-x: auto;
+}
+
+/* force remove markdown/prose/pre dark backgrounds */
+pre.code-block-content,
+.prose pre.code-block-content,
+.prose-slate pre.code-block-content,
+.dark pre.code-block-content,
+.dark .prose pre.code-block-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #f8fafc !important;
+  color: #1e293b !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* code */
+code.code-block-code,
+pre.code-block-content > code,
+.prose pre.code-block-content > code,
+.dark pre.code-block-content > code {
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #1e293b !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.875rem !important;
+  line-height: 1.6rem !important;
+}
+
+/* each row */
+.code-block-row {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 1.6rem;
+  line-height: 1.6rem;
+}
+
+/* line number */
+.line-number {
+  display: block;
+  box-sizing: border-box;
+  min-height: 1.6rem;
+  line-height: 1.6rem;
+  padding: 0 0.7rem 0 0.45rem;
+  text-align: right;
+  user-select: none;
+  background: #f1f5f9;
+  color: #94a3b8;
+  border-right: 1px solid #dde5ed;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* code line */
+.code-line {
+  display: block;
+  box-sizing: border-box;
+  min-height: 1.6rem;
+  line-height: 1.6rem;
+  padding: 0 1rem 0 0.85rem;
+  white-space: pre;
+  background: #f8fafc;
+  color: #1e293b !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.875rem;
+}
+
+/* hover */
+.code-block-row:hover .line-number,
+.code-block-row:hover .code-line {
+  background: #eef4f8;
+}
+
+/* mobile */
+@media (max-width: 640px) {
+  .code-block-header {
+    padding: 0.58rem 0.78rem;
+  }
+
+  .code-block-language {
+    font-size: 0.72rem;
+  }
+
+  .code-block-copy-btn {
+    font-size: 0.7rem;
+    padding: 0.28rem 0.58rem;
+  }
+
+  .code-block-row {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
+
+  .line-number {
+    font-size: 0.8125rem;
+    padding: 0 0.55rem 0 0.35rem;
+  }
+
+  .code-line {
+    font-size: 0.8125rem;
+    padding: 0 0.75rem 0 0.65rem;
+  }
+}
+
+/* Code blocks must always be LTR */
+.prose pre,
+.prose pre code,
+.markdown-direction pre,
+.markdown-direction pre code,
+.markdown-direction-rtl pre,
+.markdown-direction-rtl pre code,
+.markdown-direction-ltr pre,
+.markdown-direction-ltr pre code {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate;
+}
+
+/* Inline code inside Persian/RTL text */
+.prose :not(pre) > code,
+.markdown-direction :not(pre) > code,
+.markdown-direction-rtl :not(pre) > code {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
+  display: inline-block;
+}
+
+/* If your custom CodeBlock has wrappers */
+.code-block,
+.code-block *,
+.markdown-code-block,
+.markdown-code-block *,
+pre[class*='language-'],
+pre[class*='language-'] code {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate;
+}

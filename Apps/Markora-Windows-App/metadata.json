@@ -1,0 +1,6 @@
+{
+  "name": "Markora Desktop",
+  "description": "Native Windows Desktop Markdown Editor and SaaS Suite built with React, TypeScript, and Electron/Tauri hybrid desktop bridge.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

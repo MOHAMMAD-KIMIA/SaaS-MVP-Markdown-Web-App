@@ -1,0 +1,424 @@
+/* src/styles/MarkdownPreview.css */
+
+.markdown-preview {
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  line-height: 1.6;
+  color: #24292f;
+  overflow-y: auto;
+  height: 100%;
+  background: #ffffff;
+}
+
+.dark .markdown-preview {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+/* Inline code - simple gray highlight */
+.inline-code {
+  background-color: rgba(175, 184, 193, 0.2);
+  color: #c7254e;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  font-weight: 400;
+  border: 1px solid rgba(175, 184, 193, 0.3);
+}
+
+.dark .inline-code {
+  background-color: rgba(110, 118, 129, 0.25);
+  color: #e06c75;
+  border-color: rgba(110, 118, 129, 0.3);
+}
+
+/* Headings */
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #24292f;
+}
+
+.dark .markdown-preview h1,
+.dark .markdown-preview h2,
+.dark .markdown-preview h3,
+.dark .markdown-preview h4,
+.dark .markdown-preview h5,
+.dark .markdown-preview h6 {
+  color: #ffffff;
+}
+
+.markdown-preview h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #d0d7de;
+  padding-bottom: 0.3em;
+}
+
+.dark .markdown-preview h1 {
+  border-bottom-color: #3e3e42;
+}
+
+.markdown-preview h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #d0d7de;
+  padding-bottom: 0.3em;
+}
+
+.dark .markdown-preview h2 {
+  border-bottom-color: #3e3e42;
+}
+
+.markdown-preview h3 {
+  font-size: 1.25em;
+}
+
+.markdown-preview h4 {
+  font-size: 1em;
+}
+
+.markdown-preview h5 {
+  font-size: 0.875em;
+}
+
+.markdown-preview h6 {
+  font-size: 0.85em;
+  color: #57606a;
+}
+
+.dark .markdown-preview h6 {
+  color: #858585;
+}
+
+/* Paragraphs and links */
+.markdown-preview p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-preview a {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.dark .markdown-preview a {
+  color: #58a6ff;
+}
+
+.markdown-preview a:hover {
+  text-decoration: underline;
+}
+
+/* Lists */
+.markdown-preview ul,
+.markdown-preview ol {
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding-left: 2em;
+}
+
+.markdown-preview li {
+  margin-bottom: 4px;
+}
+
+/* Blockquotes */
+.markdown-preview blockquote {
+  margin: 0 0 16px 0;
+  padding: 0 1em;
+  color: #57606a;
+  border-left: 4px solid #d0d7de;
+}
+
+.dark .markdown-preview blockquote {
+  color: #858585;
+  border-left-color: #3e3e42;
+}
+
+/* Tables */
+.markdown-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.markdown-preview table th,
+.markdown-preview table td {
+  padding: 8px 13px;
+  border: 1px solid #d0d7de;
+}
+
+.dark .markdown-preview table th,
+.dark .markdown-preview table td {
+  border-color: #3e3e42;
+}
+
+.markdown-preview table th {
+  background: #f6f8fa;
+  font-weight: 600;
+}
+
+.dark .markdown-preview table th {
+  background: #252526;
+}
+
+.markdown-preview table tr:nth-child(even) {
+  background: #f6f8fa;
+}
+
+.dark .markdown-preview table tr:nth-child(even) {
+  background: #252526;
+}
+
+/* Images and horizontal rules */
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.markdown-preview hr {
+  height: 1px;
+  background: #d0d7de;
+  border: none;
+  margin: 24px 0;
+}
+
+.dark .markdown-preview hr {
+  background: #3e3e42;
+}
+
+/* Override prose styles to prevent interference */
+.prose pre {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.prose code {
+  background: transparent !important;
+  padding: 0 !important;
+  font-weight: normal !important;
+  color: inherit !important;
+}
+
+
+/* Center block math and make it scrollable if too wide */
+.katex-display {
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* KaTeX inline math */
+.katex {
+  font-size: 1.05em;
+}
+
+/* KaTeX block math */
+.katex-display {
+  margin: 1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+}
+
+/* Prevent weird overflow in long equations */
+.katex-display > .katex {
+  max-width: 100%;
+}
+
+/* Optional dark mode support */
+.dark .katex {
+  color: #e5e7eb;
+}
+
+.markdown-direction {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.markdown-direction-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.markdown-direction-ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Lists inside RTL block */
+.markdown-direction-rtl ul,
+.markdown-direction-rtl ol {
+  direction: rtl;
+  text-align: right;
+  padding-right: 1.5rem;
+  padding-left: 0;
+}
+
+/* Lists inside LTR block */
+.markdown-direction-ltr ul,
+.markdown-direction-ltr ol {
+  direction: ltr;
+  text-align: left;
+  padding-left: 1.5rem;
+  padding-right: 0;
+}
+
+/* Headings inside RTL block */
+.markdown-direction-rtl h1,
+.markdown-direction-rtl h2,
+.markdown-direction-rtl h3,
+.markdown-direction-rtl h4,
+.markdown-direction-rtl h5,
+.markdown-direction-rtl h6,
+.markdown-direction-rtl p,
+.markdown-direction-rtl blockquote,
+.markdown-direction-rtl table {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Headings inside LTR block */
+.markdown-direction-ltr h1,
+.markdown-direction-ltr h2,
+.markdown-direction-ltr h3,
+.markdown-direction-ltr h4,
+.markdown-direction-ltr h5,
+.markdown-direction-ltr h6,
+.markdown-direction-ltr p,
+.markdown-direction-ltr blockquote,
+.markdown-direction-ltr table {
+  direction: ltr;
+  text-align: left;
+}
+
+.auto-dir-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.auto-dir-ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.markdown-direction {
+  width: 100%;
+}
+
+.markdown-direction-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.markdown-direction-ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.markdown-direction-rtl * {
+  text-align: inherit;
+}
+
+.markdown-direction-ltr * {
+  text-align: inherit;
+}
+
+.force-ltr,
+.force-ltr * {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate;
+}
+
+.inline-code {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* KaTeX / math always LTR */
+.katex,
+.katex *,
+.katex-display,
+.katex-display * {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* Optional: make markdown preview blocks behave nicer */
+.markdown-preview-root pre,
+.markdown-preview-root code {
+  direction: ltr;
+  text-align: left;
+}
+
+
+.markdown-dir {
+  unicode-bidi: isolate;
+}
+
+.markdown-dir-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.markdown-dir-ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.markdown-dir-rtl > * {
+  direction: rtl;
+  text-align: right;
+}
+
+.markdown-dir-ltr > * {
+  direction: ltr;
+  text-align: left;
+}
+
+.page-break {
+  position: relative;
+  margin: 32px 0;
+  height: 0;
+  border-top: 2px dashed #999;
+}
+
+.page-break::after {
+  content: "Page Break";
+  position: absolute;
+  top: -10px;
+  right: 0;
+  background: white;
+  color: #666;
+  font-size: 12px;
+  padding: 0 6px;
+}
+
+@media print {
+  .page-break {
+    break-before: page;
+    page-break-before: always;
+    border: 0;
+    margin: 0;
+    height: 0;
+  }
+
+  .page-break::after {
+    content: "";
+    display: none;
+  }
+}

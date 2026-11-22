@@ -31,6 +31,8 @@ interface SpellCheckerOverlayProps {
   foldedPlaceholderSpans?: FoldedPlaceholderSpan[];
   focusDimming?: FocusHighlightRanges | null;
   typewriterPadding?: boolean;
+  overlayWidth?: number | null;
+  tabSize?: number;
   typography: {
     fontFamily: string;
     fontSize: number;
@@ -51,6 +53,8 @@ export const SpellCheckerOverlay = forwardRef<HTMLDivElement, SpellCheckerOverla
       foldedPlaceholderSpans = [],
       focusDimming = null,
       typewriterPadding = false,
+      overlayWidth = null,
+      tabSize = 2,
       typography,
       editorDir = 'ltr',
       className,
@@ -153,17 +157,20 @@ export const SpellCheckerOverlay = forwardRef<HTMLDivElement, SpellCheckerOverla
               key={`d-${start}`}
               data-spell-error-id={err?.id}
               data-word={err?.word}
+              style={err ? { textDecorationSkipInk: 'none' } : undefined}
               className={cn(
-                'select-none transition-colors duration-150',
+                'select-none',
+                focusDimming && 'transition-colors duration-150',
                 textColorClass,
                 isFoldedPlaceholder && 'bg-primary/12 rounded-[3px]',
                 hasComment &&
                   'bg-amber-300/35 dark:bg-amber-400/25 border-b-2 border-amber-500/80 rounded-[2px]',
                 styleHl?.kind === 'passive' &&
-                  'underline decoration-sky-500/85 decoration-dotted decoration-2 underline-offset-4',
+                  'underline decoration-sky-500/85 decoration-dotted decoration-2 underline-offset-[3px]',
                 styleHl?.kind === 'repeat' &&
-                  'bg-amber-300/20 dark:bg-amber-400/15 underline decoration-amber-500/90 decoration-wavy decoration-1 underline-offset-4 rounded-[2px]',
-                err && 'underline decoration-red-500 decoration-2 underline-offset-4'
+                  'bg-amber-300/20 dark:bg-amber-400/15 underline decoration-amber-500/90 decoration-wavy decoration-1 underline-offset-[3px] rounded-[2px]',
+                err &&
+                  'underline decoration-red-500 decoration-wavy decoration-[1.5px] underline-offset-[3px]'
               )}
             >
               {slice}
@@ -184,14 +191,24 @@ export const SpellCheckerOverlay = forwardRef<HTMLDivElement, SpellCheckerOverla
         ref={ref}
         aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute inset-0 z-0 overflow-hidden whitespace-pre-wrap break-words p-8 font-mono text-sm leading-relaxed select-none',
+          'pointer-events-none absolute inset-y-0 left-0 z-0 overflow-hidden p-8 font-mono text-sm leading-relaxed select-none box-border',
           className
         )}
         style={{
+          width: overlayWidth ? `${overlayWidth}px` : '100%',
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'break-word',
+          wordBreak: 'normal',
           unicodeBidi: 'plaintext',
           fontFamily: typography.fontFamily,
           fontSize: `${typography.fontSize}px`,
           lineHeight: typography.lineHeight,
+          letterSpacing: 'normal',
+          wordSpacing: 'normal',
+          tabSize,
+          fontVariantLigatures: 'none',
+          fontFeatureSettings: 'normal',
+          fontKerning: 'none',
           direction: editorDir,
           paddingTop: typewriterPadding ? '42vh' : undefined,
           paddingBottom: typewriterPadding ? '48vh' : undefined,

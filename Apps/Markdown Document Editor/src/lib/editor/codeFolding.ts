@@ -392,11 +392,17 @@ export function measureTextareaOffsetTops(
   style.whiteSpace = 'pre-wrap';
   style.wordWrap = 'break-word';
   style.overflowWrap = 'break-word';
+  style.wordBreak = 'normal';
   style.width = `${textarea.clientWidth}px`;
   style.fontFamily = computed.fontFamily;
   style.fontSize = computed.fontSize;
   style.lineHeight = computed.lineHeight;
   style.letterSpacing = computed.letterSpacing;
+  style.wordSpacing = computed.wordSpacing;
+  style.tabSize = computed.tabSize;
+  style.fontVariantLigatures = computed.fontVariantLigatures;
+  style.fontFeatureSettings = computed.fontFeatureSettings;
+  style.fontKerning = computed.fontKerning;
   style.paddingTop = computed.paddingTop;
   style.paddingRight = computed.paddingRight;
   style.paddingBottom = computed.paddingBottom;

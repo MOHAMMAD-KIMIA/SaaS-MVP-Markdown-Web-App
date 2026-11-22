@@ -369,15 +369,19 @@ export function SlashCommandMenu({
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [filteredCommands, selectedIndex, onSelect, onClose]);
 
-  // Handle outside click
+  // Handle outside click / right-click
   useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
+    const handleOutsidePointer = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
-    window.addEventListener('mousedown', handleMouseDown);
-    return () => window.removeEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousedown', handleOutsidePointer);
+    window.addEventListener('contextmenu', handleOutsidePointer);
+    return () => {
+      window.removeEventListener('mousedown', handleOutsidePointer);
+      window.removeEventListener('contextmenu', handleOutsidePointer);
+    };
   }, [onClose]);
 
   if (filteredCommands.length === 0) {

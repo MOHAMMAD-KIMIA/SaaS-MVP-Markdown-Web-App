@@ -46,6 +46,7 @@ export function DocumentSidebar() {
   const settings = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [showAllTags, setShowAllTags] = useState(false);
   const [renamingDoc, setRenamingDoc] = useState<string | null>(null);
   const [deletingDoc, setDeletingDoc] = useState<string | null>(null);
   const [goalDocId, setGoalDocId] = useState<string | null>(null);
@@ -376,43 +377,72 @@ export function DocumentSidebar() {
                 />
               </div>
 
-              {allWorkspaceTags.length > 0 && (
-                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5">
-                  <Tag className="h-3 w-3 text-muted-foreground shrink-0 mr-0.5" />
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTag(null)}
-                    className={cn(
-                      'px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap transition-colors',
-                      selectedTag === null
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    )}
-                  >
-                    All
-                  </button>
-                  {allWorkspaceTags.map(({ tag, count }) => {
-                    const active = selectedTag?.toLowerCase() === tag.toLowerCase();
-                    return (
+              {allWorkspaceTags.length > 0 && (() => {
+                const maxCompactTags = 6;
+                const hasOverflowTags = allWorkspaceTags.length > maxCompactTags;
+                const baseVisible = showAllTags
+                  ? allWorkspaceTags
+                  : allWorkspaceTags.slice(0, maxCompactTags);
+                const visibleTags =
+                  selectedTag &&
+                  !baseVisible.some((t) => t.tag.toLowerCase() === selectedTag.toLowerCase())
+                    ? [
+                        ...baseVisible,
+                        ...allWorkspaceTags.filter(
+                          (t) => t.tag.toLowerCase() === selectedTag.toLowerCase()
+                        ),
+                      ]
+                    : baseVisible;
+                const hiddenTagCount = Math.max(0, allWorkspaceTags.length - visibleTags.length);
+
+                return (
+                  <div className="flex flex-wrap items-center gap-1 pt-0.5 min-w-0">
+                    <Tag className="h-3 w-3 text-muted-foreground shrink-0 mr-0.5" />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTag(null)}
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap shrink-0 transition-colors',
+                        selectedTag === null
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      )}
+                    >
+                      All
+                    </button>
+                    {visibleTags.map(({ tag, count }) => {
+                      const active = selectedTag?.toLowerCase() === tag.toLowerCase();
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          title={`#${tag} (${count})`}
+                          onClick={() => setSelectedTag(active ? null : tag)}
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] max-w-[140px] min-w-0 transition-colors',
+                            active
+                              ? 'bg-primary text-primary-foreground font-medium'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                          )}
+                        >
+                          <span className="truncate">#{tag}</span>
+                          <span className="opacity-65 tabular-nums text-[10px] shrink-0">{count}</span>
+                          {active && <X className="h-2.5 w-2.5 ml-0.5 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                    {hasOverflowTags && (
                       <button
-                        key={tag}
                         type="button"
-                        onClick={() => setSelectedTag(active ? null : tag)}
-                        className={cn(
-                          'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] whitespace-nowrap transition-colors',
-                          active
-                            ? 'bg-primary text-primary-foreground font-medium'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        )}
+                        onClick={() => setShowAllTags((v) => !v)}
+                        className="px-1.5 py-0.5 rounded text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors whitespace-nowrap shrink-0"
                       >
-                        <span>#{tag}</span>
-                        <span className="opacity-65 tabular-nums text-[10px]">{count}</span>
-                        {active && <X className="h-2.5 w-2.5 ml-0.5" />}
+                        {showAllTags ? 'Less' : `+${hiddenTagCount} more`}
                       </button>
-                    );
-                  })}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })()}
 
         {/* Daily Goal Widget in Sidebar */}
         {activeDoc && (
@@ -475,7 +505,7 @@ export function DocumentSidebar() {
       </div>
 
       <ScrollArea className="flex-1 min-h-0 w-full overflow-hidden">
-        <div className="space-y-1 p-2 pr-3">
+        <div className="space-y-1 p-2 pr-3 w-full min-w-0">
           {filteredDocuments.length === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
               {searchQuery ? 'No documents found' : 'No documents yet'}
@@ -486,32 +516,40 @@ export function DocumentSidebar() {
             const docWords = doc.content.trim() ? doc.content.trim().split(/\s+/).length : 0;
             const docGoal = doc.dailyWordGoal;
             const docPct = docGoal && docGoal > 0 ? Math.min(100, Math.round((docWords / docGoal) * 100)) : 0;
+            const docTags = docTagsMap.get(doc.id) || [];
 
             return (
               <div
                 key={doc.id}
                 className={cn(
-                  'group flex flex-col rounded-md px-3 py-2 text-sm hover:bg-accent cursor-pointer gap-1 overflow-hidden w-full transition-colors',
+                  'group flex flex-col rounded-md px-3 py-2 text-sm hover:bg-accent cursor-pointer gap-1 overflow-hidden w-full min-w-0 transition-colors',
                   activeDocumentId === doc.id && 'bg-accent'
                 )}
                 onClick={() => handleSelectDoc(doc.id)}
               >
-                <div className="flex items-center justify-between gap-2 w-full">
+                <div className="flex items-center justify-between gap-2 w-full min-w-0">
                   <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                     <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1 overflow-hidden">
-                      <div className="truncate font-medium">{doc.title}</div>
-                      <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
-                        <span>{formatRelativeTime(doc.updatedAt)}</span>
-                        {(docTagsMap.get(doc.id)?.length || 0) > 0 && (
+                      <div className="truncate font-medium" title={doc.title}>
+                        {doc.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1.5 min-w-0 w-full overflow-hidden">
+                        <span className="shrink-0 whitespace-nowrap">
+                          {formatRelativeTime(doc.updatedAt)}
+                        </span>
+                        {docTags.length > 0 && (
                           <>
-                            <span aria-hidden="true">·</span>
-                            <span className="text-primary/80 truncate">
-                              {docTagsMap
-                                .get(doc.id)!
+                            <span aria-hidden="true" className="shrink-0">·</span>
+                            <span
+                              className="text-primary/80 min-w-0 flex-1 truncate"
+                              title={docTags.map((t) => `#${t}`).join(' ')}
+                            >
+                              {docTags
                                 .slice(0, 3)
                                 .map((t) => `#${t}`)
                                 .join(' ')}
+                              {docTags.length > 3 ? ` +${docTags.length - 3}` : ''}
                             </span>
                           </>
                         )}
@@ -525,6 +563,8 @@ export function DocumentSidebar() {
                         <Button
                           size="sm"
                           variant="ghost"
+                          aria-label={`Actions for ${doc.title}`}
+                          title="Document actions"
                           className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted opacity-100 transition-colors shrink-0 flex items-center justify-center"
                         >
                           <MoreVertical className="h-4 w-4 shrink-0" />

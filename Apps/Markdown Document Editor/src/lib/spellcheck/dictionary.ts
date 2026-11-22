@@ -215,6 +215,7 @@ const TECH_AND_MODERN_WORDS: string[] = [
   'embeddings', 'vector', 'vectors', 'rag', 'cron', 'daemon', 'daemons',
   'app', 'apps', 'applet', 'applets', 'ok', 'okay', 'etc', 'eg', 'ie', 'vs',
   'faq', 'faqs', 'kpi', 'kpis', 'roi', 'sla', 'b2b', 'b2c',
+  'ctrl', 'cmd', 'esc', 'pgup', 'pgdn', 'del', 'ins', 'fn', 'capslock', 'numlock',
 ];
 
 const CONTRACTIONS: string[] = [

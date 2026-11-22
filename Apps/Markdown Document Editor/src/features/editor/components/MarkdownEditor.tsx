@@ -3,6 +3,7 @@ import React, {
   forwardRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useImperativeHandle,
@@ -26,7 +27,10 @@ import {
   useAssetStore,
 } from '../../../stores/assetStore';
 import { analyzeReadability } from '../../../lib/markdown/readability';
-import { getCaretCoordinates } from '../../../lib/editor/caretCoordinates';
+import {
+  getCaretCoordinates,
+  isPointInTextareaRange,
+} from '../../../lib/editor/caretCoordinates';
 import { getFocusHighlightRanges } from '../../../lib/editor/focusRanges';
 import {
   buildFoldedDisplay,
@@ -113,6 +117,8 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     const [editorDir, setEditorDir] = useState<TextDirection>(defaultDir);
     const [displayCaret, setDisplayCaret] = useState<number>(0);
     const [isDraggingImage, setIsDraggingImage] = useState(false);
+    const [overlayWidth, setOverlayWidth] = useState<number | null>(null);
+    const spellContextMenuOpenRef = useRef<boolean>(false);
 
     // Code block folding state (non-destructive display projection)
     const [foldedIds, setFoldedIds] = useState<Set<string>>(() => new Set());
@@ -286,6 +292,42 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
       return () => observer.disconnect();
     }, [foldedView.displayMarkers, displayText, typography.fontFamily, typography.fontSize, typography.lineHeight, typewriterMode]);
 
+    // Keep overlay width & scroll offset locked to textarea.clientWidth (excludes textarea vertical scrollbar)
+    const syncOverlayMetrics = useCallback(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const nextWidth = ta.clientWidth;
+      if (nextWidth > 0) {
+        setOverlayWidth((prev) => (prev === nextWidth ? prev : nextWidth));
+      }
+      if (overlayRef.current) {
+        overlayRef.current.scrollTop = ta.scrollTop;
+        overlayRef.current.scrollLeft = ta.scrollLeft;
+      }
+    }, []);
+
+    useLayoutEffect(() => {
+      syncOverlayMetrics();
+    }, [
+      syncOverlayMetrics,
+      displayText,
+      displayCaret,
+      typewriterMode,
+      showLineNumbers,
+      regions.length,
+      typography.fontFamily,
+      typography.fontSize,
+      typography.lineHeight,
+    ]);
+
+    useEffect(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const observer = new ResizeObserver(syncOverlayMetrics);
+      observer.observe(ta);
+      return () => observer.disconnect();
+    }, [syncOverlayMetrics]);
+
     const isDimmingActive = focusMode && focusDimming;
     const activeFocusRanges = useMemo(() => {
       if (!isDimmingActive) return null;
@@ -330,6 +372,10 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
       error: SpellError;
       position: { x: number; y: number };
     } | null>(null);
+
+    useEffect(() => {
+      spellContextMenuOpenRef.current = spellContextMenu !== null;
+    }, [spellContextMenu]);
 
     // Run spell check with debounce
     useEffect(() => {
@@ -496,6 +542,11 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     useEffect(() => {
       setInlineCommentState(null);
       setImagePopover(null);
+      setSpellContextMenu(null);
+      setWikiAutocomplete(null);
+      setSlashMenu(null);
+      setFormatBarPosition(null);
+      spellContextMenuOpenRef.current = false;
     }, [documentId]);
 
     const handleScrollTextarea = (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -639,11 +690,14 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
 
     const checkTriggers = (text: string, start: number, end: number) => {
       if (!textareaRef.current) return;
+      if (spellContextMenuOpenRef.current) return;
 
       // 1. Text Selection -> Floating Format Bar
       if (start !== end && Math.abs(end - start) > 0) {
         setSlashMenu(null);
         setWikiAutocomplete(null);
+        setInlineCommentState(null);
+        setImagePopover(null);
         try {
           const coords = getCaretCoordinates(textareaRef.current, Math.min(start, end));
           setFormatBarPosition({
@@ -679,6 +733,8 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
               openBracketPos: lineStart + openBracketIdx,
             });
             setSlashMenu(null);
+            setInlineCommentState(null);
+            setImagePopover(null);
             return;
           } catch {
             setWikiAutocomplete(null);
@@ -695,6 +751,8 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
         const slashOffset = lineBeforeCaret.charAt(matchIdx) === '/' ? matchIdx : matchIdx + 1;
         const slashPos = lineStart + slashOffset;
         const slashQuery = slashMatch[1] || '';
+        setInlineCommentState(null);
+        setImagePopover(null);
         try {
           const coords = getCaretCoordinates(textareaRef.current, start);
           setSlashMenu({
@@ -719,6 +777,8 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      spellContextMenuOpenRef.current = false;
+      setSpellContextMenu(null);
       const nextDisplayText = e.target.value;
       const dispStart = e.target.selectionStart ?? 0;
       const dispEnd = e.target.selectionEnd ?? 0;
@@ -760,6 +820,7 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     };
 
     const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+      if (spellContextMenuOpenRef.current) return;
       const target = e.target as HTMLTextAreaElement;
       const dispStart = target.selectionStart ?? 0;
       syncSelectionAndDirection(target);
@@ -770,6 +831,8 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     };
 
     const handleTextareaClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+      spellContextMenuOpenRef.current = false;
+      setSpellContextMenu(null);
       handleSelect(e);
       if (!textareaRef.current) return;
       const dispStart = textareaRef.current.selectionStart ?? 0;
@@ -796,6 +859,10 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
           matchedImage = true;
           try {
             const coords = getCaretCoordinates(textareaRef.current, dispStart);
+            setSlashMenu(null);
+            setWikiAutocomplete(null);
+            setFormatBarPosition(null);
+            setInlineCommentState(null);
             setImagePopover({
               start: absStart,
               end: absEnd,
@@ -821,6 +888,10 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
       if (hitOpen) {
         try {
           const coords = getCaretCoordinates(textareaRef.current, dispStart);
+          setSlashMenu(null);
+          setWikiAutocomplete(null);
+          setFormatBarPosition(null);
+          setImagePopover(null);
           setInlineCommentState({
             position: { top: coords.top, left: coords.left },
             selectionRange: { start: caretFull, end: caretFull },
@@ -1107,45 +1178,37 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     };
 
     const handleContextMenu = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+      // Dismiss any active autocomplete / floating bars when invoking a context menu
+      setSlashMenu(null);
+      setWikiAutocomplete(null);
+      setFormatBarPosition(null);
+      setInlineCommentState(null);
+      setImagePopover(null);
+
       if (!isSpellCheckEnabled || displaySpellErrors.length === 0 || !textareaRef.current) {
+        spellContextMenuOpenRef.current = false;
+        setSpellContextMenu(null);
         return;
       }
 
       const textarea = textareaRef.current;
       const clientX = e.clientX;
       const clientY = e.clientY;
+      const isKeyboardTrigger = clientX === 0 && clientY === 0;
 
-      // 1. Check current selection / caret
-      const selStart = textarea.selectionStart;
-      let matchedDispError = displaySpellErrors.find(
-        (err) => selStart >= err.start && selStart <= err.end
-      );
+      // 1. For pointer right-click, match the exact word under the mouse cursor using unclamped rects
+      let matchedDispError = !isKeyboardTrigger
+        ? displaySpellErrors.find((err) =>
+            isPointInTextareaRange(textarea, err.start, err.end, clientX, clientY, 6)
+          )
+        : undefined;
 
-      // 2. If caret not placed directly in the error, check error coordinate bounding boxes
-      if (!matchedDispError) {
-        for (const err of displaySpellErrors) {
-          try {
-            const startCoords = getCaretCoordinates(textarea, err.start);
-            const endCoords = getCaretCoordinates(textarea, err.end);
-
-            const top = startCoords.top - 6;
-            const bottom = startCoords.top + startCoords.height + 6;
-            const left = Math.min(startCoords.left, endCoords.left) - 8;
-            const right = Math.max(startCoords.left, endCoords.left) + 16;
-
-            if (
-              clientY >= top &&
-              clientY <= bottom &&
-              clientX >= left &&
-              clientX <= right
-            ) {
-              matchedDispError = err;
-              break;
-            }
-          } catch {
-            // ignore coordinate measurement issues
-          }
-        }
+      // 2. Fallback to caret offset only for keyboard-invoked context menu (or if browser collapsed caret on the error)
+      if (!matchedDispError && isKeyboardTrigger) {
+        const selStart = textarea.selectionStart;
+        matchedDispError = displaySpellErrors.find(
+          (err) => selStart >= err.start && selStart <= err.end
+        );
       }
 
       if (matchedDispError) {
@@ -1153,15 +1216,27 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
         if (originalError) {
           e.preventDefault();
           e.stopPropagation();
+          spellContextMenuOpenRef.current = true;
+          const menuPos = isKeyboardTrigger
+            ? (() => {
+                const c = getCaretCoordinates(textarea, matchedDispError.start);
+                return { x: c.left, y: c.top + c.height };
+              })()
+            : { x: clientX, y: clientY };
           setSpellContextMenu({
             error: originalError,
-            position: { x: clientX, y: clientY },
+            position: menuPos,
           });
+          return;
         }
       }
+
+      spellContextMenuOpenRef.current = false;
+      setSpellContextMenu(null);
     };
 
     const handleApplySpellSuggestion = (error: SpellError, suggestion: string) => {
+      spellContextMenuOpenRef.current = false;
       const before = value.substring(0, error.start);
       const after = value.substring(error.end);
       const newValue = before + suggestion + after;
@@ -1181,16 +1256,24 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     };
 
     const handleAddToDictionary = (word: string) => {
+      spellContextMenuOpenRef.current = false;
       addWordToStore(word);
       setSpellContextMenu(null);
     };
 
     const handleIgnoreWord = (word: string) => {
+      spellContextMenuOpenRef.current = false;
       ignoreWordInStore(word);
       setSpellContextMenu(null);
     };
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (spellContextMenu && e.key === 'Escape') {
+        e.preventDefault();
+        spellContextMenuOpenRef.current = false;
+        setSpellContextMenu(null);
+        return;
+      }
       // Allow popup menus to intercept navigation and insertion keys
       if (
         slashMenu &&
@@ -1547,6 +1630,8 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
             foldedPlaceholderSpans={foldedPlaceholderSpans}
             focusDimming={activeFocusRanges}
             typewriterPadding={typewriterMode}
+            overlayWidth={overlayWidth}
+            tabSize={tabSize}
             typography={typography}
             editorDir={editorDir}
             enabled={isSpellCheckEnabled}
@@ -1567,17 +1652,26 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
             onScroll={handleScrollTextarea}
             onContextMenu={handleContextMenu}
             className={cn(
-              'relative z-10 h-full w-full resize-none border-0 bg-transparent p-8 font-mono text-sm leading-relaxed outline-none',
+              'relative z-10 h-full w-full resize-none border-0 bg-transparent p-8 font-mono text-sm leading-relaxed outline-none box-border',
               isDimmingActive
                 ? 'text-transparent selection:bg-primary/25'
                 : 'text-foreground',
               className
             )}
             style={{
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'break-word',
+              wordBreak: 'normal',
               unicodeBidi: 'plaintext',
               fontFamily: typography.fontFamily,
               fontSize: `${typography.fontSize}px`,
               lineHeight: typography.lineHeight,
+              letterSpacing: 'normal',
+              wordSpacing: 'normal',
+              tabSize,
+              fontVariantLigatures: 'none',
+              fontFeatureSettings: 'normal',
+              fontKerning: 'none',
               caretColor: isDimmingActive ? 'var(--foreground)' : undefined,
               paddingTop: typewriterMode ? '42vh' : undefined,
               paddingBottom: typewriterMode ? '48vh' : undefined,
@@ -1596,7 +1690,10 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
             onApplySuggestion={handleApplySpellSuggestion}
             onAddToDictionary={handleAddToDictionary}
             onIgnoreWord={handleIgnoreWord}
-            onClose={() => setSpellContextMenu(null)}
+            onClose={() => {
+              spellContextMenuOpenRef.current = false;
+              setSpellContextMenu(null);
+            }}
           />
         )}
 

@@ -7,6 +7,109 @@ export interface CaretCoordinates {
   height: number;
 }
 
+function createTextareaMirror(element: HTMLTextAreaElement): HTMLDivElement {
+  const computed = window.getComputedStyle(element);
+  const div = document.createElement('div');
+  const style = div.style;
+
+  style.position = 'absolute';
+  style.top = '0px';
+  style.left = '-9999px';
+  style.visibility = 'hidden';
+  style.pointerEvents = 'none';
+  style.whiteSpace = 'pre-wrap';
+  style.wordWrap = 'break-word';
+  style.overflowWrap = 'break-word';
+  style.wordBreak = 'normal';
+  style.boxSizing = 'border-box';
+  style.width = `${element.clientWidth}px`;
+  style.fontFamily = computed.fontFamily;
+  style.fontSize = computed.fontSize;
+  style.fontWeight = computed.fontWeight;
+  style.fontStyle = computed.fontStyle;
+  style.lineHeight = computed.lineHeight;
+  style.letterSpacing = computed.letterSpacing;
+  style.wordSpacing = computed.wordSpacing;
+  style.tabSize = computed.tabSize;
+  style.fontVariantLigatures = computed.fontVariantLigatures;
+  style.fontFeatureSettings = computed.fontFeatureSettings;
+  style.fontKerning = computed.fontKerning;
+  style.direction = computed.direction;
+  style.unicodeBidi = computed.unicodeBidi;
+  style.paddingTop = computed.paddingTop;
+  style.paddingRight = computed.paddingRight;
+  style.paddingBottom = computed.paddingBottom;
+  style.paddingLeft = computed.paddingLeft;
+  style.borderTopWidth = '0px';
+  style.borderRightWidth = '0px';
+  style.borderBottomWidth = '0px';
+  style.borderLeftWidth = '0px';
+
+  return div;
+}
+
+/**
+ * Checks whether a viewport point (clientX, clientY) falls inside (or within tolerance of)
+ * a character range [start, end] in a textarea using exact unclamped DOM range rects.
+ */
+export function isPointInTextareaRange(
+  element: HTMLTextAreaElement,
+  start: number,
+  end: number,
+  clientX: number,
+  clientY: number,
+  tolerancePx = 6
+): boolean {
+  if (typeof window === 'undefined' || !element || end <= start) return false;
+
+  const rect = element.getBoundingClientRect();
+  if (
+    clientX < rect.left ||
+    clientX > rect.right ||
+    clientY < rect.top ||
+    clientY > rect.bottom
+  ) {
+    return false;
+  }
+
+  let mirror: HTMLDivElement | null = null;
+  try {
+    const safeStart = Math.max(0, Math.min(start, element.value.length));
+    const safeEnd = Math.max(safeStart, Math.min(end, element.value.length));
+    if (safeEnd <= safeStart) return false;
+
+    mirror = createTextareaMirror(element);
+    const fullTextNode = document.createTextNode(element.value);
+    mirror.appendChild(fullTextNode);
+    document.body.appendChild(mirror);
+
+    const mirrorRect = mirror.getBoundingClientRect();
+    const range = document.createRange();
+    range.setStart(fullTextNode, safeStart);
+    range.setEnd(fullTextNode, safeEnd);
+
+    const clientRects = range.getClientRects();
+    for (let i = 0; i < clientRects.length; i++) {
+      const r = clientRects[i];
+      const top = rect.top + (r.top - mirrorRect.top) - element.scrollTop - tolerancePx;
+      const bottom = rect.top + (r.bottom - mirrorRect.top) - element.scrollTop + tolerancePx;
+      const left = rect.left + (r.left - mirrorRect.left) - element.scrollLeft - tolerancePx;
+      const right = rect.left + (r.right - mirrorRect.left) - element.scrollLeft + tolerancePx;
+
+      if (clientX >= left && clientX <= right && clientY >= top && clientY <= bottom) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  } finally {
+    if (mirror && mirror.parentNode) {
+      mirror.parentNode.removeChild(mirror);
+    }
+  }
+}
+
 export function getCaretCoordinates(
   element: HTMLTextAreaElement,
   position: number
@@ -35,43 +138,27 @@ export function getCaretCoordinates(
   let calculatedLeft = rect.left + paddingLeft + currentLineText.length * charWidth - element.scrollLeft;
 
   // Try high-precision mirror measurement safely
+  let mirror: HTMLDivElement | null = null;
   try {
-    const div = document.createElement('div');
-    const style = div.style;
-
-    style.position = 'absolute';
-    style.top = '0px';
-    style.left = '-9999px';
-    style.visibility = 'hidden';
-    style.pointerEvents = 'none';
-    style.whiteSpace = 'pre-wrap';
-    style.wordWrap = 'break-word';
-    style.width = `${element.clientWidth}px`;
-    style.fontFamily = computed.fontFamily;
-    style.fontSize = computed.fontSize;
-    style.lineHeight = computed.lineHeight;
-    style.paddingTop = computed.paddingTop;
-    style.paddingRight = computed.paddingRight;
-    style.paddingBottom = computed.paddingBottom;
-    style.paddingLeft = computed.paddingLeft;
-    style.boxSizing = computed.boxSizing;
-
-    div.textContent = textUpToPosition;
+    mirror = createTextareaMirror(element);
+    mirror.textContent = textUpToPosition;
 
     const span = document.createElement('span');
-    span.textContent = element.value.substring(position, position + 1) || '.';
-    div.appendChild(span);
+    span.textContent = element.value.substring(position, position + 1) || '\u200b';
+    mirror.appendChild(span);
 
-    document.body.appendChild(div);
+    document.body.appendChild(mirror);
 
     if (typeof span.offsetTop === 'number' && typeof span.offsetLeft === 'number') {
       calculatedTop = rect.top + span.offsetTop - element.scrollTop;
       calculatedLeft = rect.left + span.offsetLeft - element.scrollLeft;
     }
-
-    document.body.removeChild(div);
-  } catch (err) {
+  } catch {
     // If mirror measurement throws in any environment, fallback is used
+  } finally {
+    if (mirror && mirror.parentNode) {
+      mirror.parentNode.removeChild(mirror);
+    }
   }
 
   // Constrain coordinates nicely within the visible viewport

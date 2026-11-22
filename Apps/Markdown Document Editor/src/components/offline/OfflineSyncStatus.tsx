@@ -21,7 +21,11 @@ import {
   DialogDescription,
 } from '../../app/components/ui/dialog';
 
-export function OfflineSyncStatus() {
+interface OfflineSyncStatusProps {
+  compact?: boolean;
+}
+
+export function OfflineSyncStatus({ compact = false }: OfflineSyncStatusProps) {
   const {
     isOnline,
     swActive,
@@ -39,52 +43,89 @@ export function OfflineSyncStatus() {
 
   const [isOpen, setIsOpen] = useState(false);
 
+  const statusTooltip = `Network & Sync Status: ${isOnline ? 'Online' : 'Offline'}${
+    pendingCount > 0 ? ` (${pendingCount} queued in IndexedDB)` : ' (All changes synced)'
+  }`;
+
   return (
     <>
-      {/* Compact Status Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className={`flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-all border ${
-          !isOnline
-            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
-            : isSyncing
-            ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 animate-pulse'
-            : pendingCount > 0
-            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'
-            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-        }`}
-        title={`Network & Sync Status: ${isOnline ? 'Online' : 'Offline'} (${pendingCount} changes queued in IndexedDB)`}
-      >
-        {!isOnline ? (
-          <>
-            <WifiOff className="h-3 w-3 text-amber-500 shrink-0" />
-            <span>Offline</span>
-            {pendingCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white dark:text-black font-bold text-[10px]">
-                {pendingCount}
-              </span>
-            )}
-          </>
-        ) : isSyncing ? (
-          <>
-            <RefreshCw className="h-3 w-3 text-indigo-500 animate-spin shrink-0" />
-            <span>Syncing...</span>
-          </>
-        ) : pendingCount > 0 ? (
-          <>
-            <Cloud className="h-3 w-3 text-blue-500 shrink-0" />
-            <span>Sync Queued</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-blue-500 text-white font-bold text-[10px]">
+      {compact ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className={`flex items-center gap-1 h-6 px-1.5 rounded text-[11px] font-medium transition-colors ${
+            !isOnline
+              ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+              : isSyncing
+              ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10'
+              : pendingCount > 0
+              ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-500/10'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
+          }`}
+          title={statusTooltip}
+          aria-label={statusTooltip}
+        >
+          {!isOnline ? (
+            <WifiOff className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          ) : isSyncing ? (
+            <RefreshCw className="h-3.5 w-3.5 text-indigo-500 animate-spin shrink-0" />
+          ) : pendingCount > 0 ? (
+            <Cloud className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+          ) : (
+            <Cloud className="h-3.5 w-3.5 text-emerald-500/80 shrink-0" />
+          )}
+          {pendingCount > 0 && (
+            <span className="tabular-nums font-mono text-[10px] leading-none">
               {pendingCount}
             </span>
-          </>
-        ) : (
-          <>
-            <Cloud className="h-3 w-3 text-emerald-500 shrink-0" />
-            <span>Synced</span>
-          </>
-        )}
-      </button>
+          )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className={`flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-all border ${
+            !isOnline
+              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+              : isSyncing
+              ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 animate-pulse'
+              : pendingCount > 0
+              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'
+              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+          }`}
+          title={statusTooltip}
+        >
+          {!isOnline ? (
+            <>
+              <WifiOff className="h-3 w-3 text-amber-500 shrink-0" />
+              <span>Offline</span>
+              {pendingCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white dark:text-black font-bold text-[10px]">
+                  {pendingCount}
+                </span>
+              )}
+            </>
+          ) : isSyncing ? (
+            <>
+              <RefreshCw className="h-3 w-3 text-indigo-500 animate-spin shrink-0" />
+              <span>Syncing...</span>
+            </>
+          ) : pendingCount > 0 ? (
+            <>
+              <Cloud className="h-3 w-3 text-blue-500 shrink-0" />
+              <span>Sync Queued</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-blue-500 text-white font-bold text-[10px]">
+                {pendingCount}
+              </span>
+            </>
+          ) : (
+            <>
+              <Cloud className="h-3 w-3 text-emerald-500 shrink-0" />
+              <span>Synced</span>
+            </>
+          )}
+        </button>
+      )}
 
       {/* Detailed Sync Manager Modal */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

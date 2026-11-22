@@ -109,11 +109,11 @@ export function FrontmatterBar({
   return (
     <div className="border-b border-border bg-muted/20 shrink-0 text-xs">
       {/* Compact Header Row */}
-      <div className="flex items-center justify-between gap-2 px-4 py-1.5 min-h-[34px]">
+      <div className="flex items-center justify-between gap-2 px-4 py-1.5 min-h-[34px] min-w-0">
         <button
           type="button"
           onClick={() => setIsExpanded((v) => !v)}
-          className="flex items-center gap-2 min-w-0 text-left text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden text-left text-muted-foreground hover:text-foreground transition-colors"
         >
           {isExpanded ? (
             <ChevronDown className="h-3.5 w-3.5 shrink-0" />
@@ -124,33 +124,33 @@ export function FrontmatterBar({
           <span className="font-medium text-foreground shrink-0">Properties</span>
 
           {!isExpanded && hasAnyMeta && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate ml-1">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0 flex-1 overflow-hidden ml-1">
               {parsed.status && (
                 <>
-                  <span>{parsed.status}</span>
-                  <span aria-hidden="true">·</span>
+                  <span className="shrink-0 whitespace-nowrap">{parsed.status}</span>
+                  <span aria-hidden="true" className="shrink-0">·</span>
                 </>
               )}
               {parsed.author && (
                 <>
-                  <span>{parsed.author}</span>
-                  <span aria-hidden="true">·</span>
+                  <span className="shrink-0 max-w-[120px] truncate">{parsed.author}</span>
+                  <span aria-hidden="true" className="shrink-0">·</span>
                 </>
               )}
               {parsed.date && (
                 <>
-                  <span className="tabular-nums">{parsed.date}</span>
-                  <span aria-hidden="true">·</span>
+                  <span className="tabular-nums shrink-0 whitespace-nowrap">{parsed.date}</span>
+                  <span aria-hidden="true" className="shrink-0">·</span>
                 </>
               )}
               {parsed.folder && (
                 <>
-                  <span>{parsed.folder}</span>
-                  <span aria-hidden="true">·</span>
+                  <span className="shrink-0 max-w-[120px] truncate">{parsed.folder}</span>
+                  <span aria-hidden="true" className="shrink-0">·</span>
                 </>
               )}
               {parsed.tags.length > 0 && (
-                <span className="text-primary/90 truncate">
+                <span className="text-primary/90 min-w-0 flex-1 truncate">
                   {parsed.tags.map((t) => `#${t}`).join(' · ')}
                 </span>
               )}

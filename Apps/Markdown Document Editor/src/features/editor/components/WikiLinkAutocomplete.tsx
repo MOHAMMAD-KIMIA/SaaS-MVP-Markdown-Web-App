@@ -93,15 +93,19 @@ export function WikiLinkAutocomplete({
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [filteredDocs, selectedIndex, totalOptionsCount, showCreateOption, query, onSelect, onClose]);
 
-  // Outside click
+  // Outside click / right-click
   useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
+    const handleOutsidePointer = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
-    window.addEventListener('mousedown', handleMouseDown);
-    return () => window.removeEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousedown', handleOutsidePointer);
+    window.addEventListener('contextmenu', handleOutsidePointer);
+    return () => {
+      window.removeEventListener('mousedown', handleOutsidePointer);
+      window.removeEventListener('contextmenu', handleOutsidePointer);
+    };
   }, [onClose]);
 
   const safeTop = Math.max(56, Math.min(position.top, window.innerHeight - 320));
@@ -187,7 +191,16 @@ export function WikiLinkAutocomplete({
           <button
             data-index={filteredDocs.length}
             type="button"
-            onClick={() => onSelect(query.trim(), true)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect(query.trim(), true);
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect(query.trim(), true);
+            }}
             onMouseEnter={() => setSelectedIndex(filteredDocs.length)}
             className={cn(
               'w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors border border-dashed border-purple-500/40',

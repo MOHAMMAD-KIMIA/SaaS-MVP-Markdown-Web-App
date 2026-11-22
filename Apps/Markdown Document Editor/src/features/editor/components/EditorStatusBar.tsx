@@ -17,11 +17,15 @@ import {
   Maximize2,
   SlidersHorizontal,
   ChevronUp,
+  Expand,
+  ListTree,
 } from 'lucide-react';
 import { desktop } from '../../../lib/desktop/bridge';
 import { OfflineSyncStatus } from '../../../components/offline/OfflineSyncStatus';
 import { findCodeBlockRegions } from '../../../lib/editor/codeFolding';
+import { parseMarkdownOutline } from '../../../lib/markdown/outline';
 import { analyzeReadability } from '../../../lib/markdown/readability';
+import { toggleZenModeWithFullscreen } from '../../../lib/editor/zenFullscreen';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +50,8 @@ export function EditorStatusBar({ cursorPosition }: EditorStatusBarProps) {
   const openDictionaryPage = useUIStore((s) => s.openDictionaryPage);
   const isReadabilityOpen = useUIStore((s) => s.isReadabilityOpen);
   const toggleReadability = useUIStore((s) => s.toggleReadability);
+  const isTableOfContentsOpen = useUIStore((s) => s.isTableOfContentsOpen);
+  const toggleTableOfContents = useUIStore((s) => s.toggleTableOfContents);
   const typewriterMode = useEditorStore((s) => s.typewriterMode);
   const focusMode = useEditorStore((s) => s.focusMode);
   const toggleTypewriterMode = useEditorStore((s) => s.toggleTypewriterMode);
@@ -57,6 +63,7 @@ export function EditorStatusBar({ cursorPosition }: EditorStatusBarProps) {
 
   const content = activeDoc?.content || '';
   const codeBlockCount = React.useMemo(() => findCodeBlockRegions(content).length, [content]);
+  const headingCount = React.useMemo(() => parseMarkdownOutline(content).length, [content]);
   const readability = React.useMemo(() => analyzeReadability(content), [content]);
   const styleHintCount =
     readability.passiveHints.length + readability.repeatedWordHints.length;
@@ -241,6 +248,14 @@ export function EditorStatusBar({ cursorPosition }: EditorStatusBarProps) {
             <DropdownMenuSeparator />
 
             {/* Writing Modes */}
+            <DropdownMenuItem onSelect={toggleZenModeWithFullscreen} className="justify-between text-xs">
+              <span className="flex items-center gap-2">
+                <Expand className="h-3.5 w-3.5 text-primary" />
+                <span>Zen Mode (Full-Screen)</span>
+              </span>
+              <span className="text-[10px] text-muted-foreground font-mono">Alt+Z</span>
+            </DropdownMenuItem>
+
             <DropdownMenuItem onSelect={toggleFocusMode} className="justify-between text-xs">
               <span className="flex items-center gap-2">
                 <Maximize2 className="h-3.5 w-3.5 text-primary" />
@@ -286,6 +301,17 @@ export function EditorStatusBar({ cursorPosition }: EditorStatusBarProps) {
             <DropdownMenuSeparator />
 
             {/* Writing Insights & Dictionary */}
+            <DropdownMenuItem onSelect={toggleTableOfContents} className="justify-between text-xs">
+              <span className="flex items-center gap-2">
+                <ListTree className="h-3.5 w-3.5 text-primary" />
+                <span>Table of Contents</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground tabular-nums">
+                <span>{headingCount}</span>
+                {isTableOfContentsOpen && <Check className="h-3.5 w-3.5 text-primary" />}
+              </span>
+            </DropdownMenuItem>
+
             <DropdownMenuItem onSelect={toggleReadability} className="justify-between text-xs">
               <span className="flex items-center gap-2">
                 <BookOpen className="h-3.5 w-3.5 text-primary" />

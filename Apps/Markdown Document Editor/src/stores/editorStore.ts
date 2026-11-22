@@ -8,6 +8,8 @@ interface EditorStore {
   cursorOffset: number;
   focusMode: boolean;
   focusDimming: boolean;
+  zenMode: boolean;
+  zenDimming: boolean;
   typewriterMode: boolean;
   showStyleHighlights: boolean;
 
@@ -18,6 +20,9 @@ interface EditorStore {
   setFocusMode: (enabled: boolean) => void;
   toggleFocusMode: () => void;
   toggleFocusDimming: () => void;
+  setZenMode: (enabled: boolean) => void;
+  toggleZenMode: () => void;
+  toggleZenDimming: () => void;
   toggleTypewriterMode: () => void;
   setTypewriterMode: (enabled: boolean) => void;
   toggleStyleHighlights: () => void;
@@ -33,6 +38,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   cursorOffset: 0,
   focusMode: false,
   focusDimming: true,
+  zenMode: false,
+  zenDimming: false,
   typewriterMode: false,
   showStyleHighlights: false,
 
@@ -64,6 +71,19 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     get().saveToStorage();
   },
 
+  setZenMode: (enabled: boolean) => {
+    set({ zenMode: enabled });
+  },
+
+  toggleZenMode: () => {
+    set((state) => ({ zenMode: !state.zenMode }));
+  },
+
+  toggleZenDimming: () => {
+    set((state) => ({ zenDimming: !state.zenDimming }));
+    get().saveToStorage();
+  },
+
   toggleTypewriterMode: () => {
     set((state) => ({ typewriterMode: !state.typewriterMode }));
     get().saveToStorage();
@@ -80,11 +100,19 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   saveToStorage: () => {
-    const { editorMode, focusMode, focusDimming, typewriterMode, showStyleHighlights } = get();
+    const {
+      editorMode,
+      focusMode,
+      focusDimming,
+      zenDimming,
+      typewriterMode,
+      showStyleHighlights,
+    } = get();
     saveToLocalStorage(STORAGE_KEY, {
       editorMode,
       focusMode,
       focusDimming,
+      zenDimming,
       typewriterMode,
       showStyleHighlights,
     });
@@ -95,12 +123,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       editorMode?: EditorMode;
       focusMode?: boolean;
       focusDimming?: boolean;
+      zenDimming?: boolean;
       typewriterMode?: boolean;
       showStyleHighlights?: boolean;
     }>(STORAGE_KEY, {
       editorMode: 'split',
       focusMode: false,
       focusDimming: true,
+      zenDimming: false,
       typewriterMode: false,
       showStyleHighlights: false,
     });
@@ -108,6 +138,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       editorMode: settings.editorMode || 'split',
       focusMode: Boolean(settings.focusMode),
       focusDimming: settings.focusDimming !== undefined ? Boolean(settings.focusDimming) : true,
+      zenMode: false,
+      zenDimming: Boolean(settings.zenDimming),
       typewriterMode: Boolean(settings.typewriterMode),
       showStyleHighlights: Boolean(settings.showStyleHighlights),
     });

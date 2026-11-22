@@ -10,10 +10,11 @@ import {
 } from '../../../app/components/ui/command';
 import { useUIStore } from '../../../stores/uiStore';
 import { useEditorStore } from '../../../stores/editorStore';
+import { toggleZenModeWithFullscreen } from '../../../lib/editor/zenFullscreen';
 import { commands } from '../data/commands';
 
 export function CommandPalette() {
-  const { isCommandPaletteOpen, closeCommandPalette, openExportModal, openTemplatePicker, openHistoryPanel, openSearchPanel, openTableBuilder, openImportBackupModal, openCommentsPanel, openOutlinePanel, openPresentation, openKnowledgeGraph, openAssetManager, toggleReadability } = useUIStore();
+  const { isCommandPaletteOpen, closeCommandPalette, openExportModal, openTemplatePicker, openHistoryPanel, openSearchPanel, openTableBuilder, openImportBackupModal, openCommentsPanel, openOutlinePanel, toggleTableOfContents, openPresentation, openKnowledgeGraph, openAssetManager, toggleReadability } = useUIStore();
   const { setEditorMode, toggleFocusMode, toggleTypewriterMode } = useEditorStore();
 
   useEffect(() => {
@@ -57,6 +58,9 @@ export function CommandPalette() {
       case 'search':
         openSearchPanel();
         break;
+      case 'toggle-toc':
+        toggleTableOfContents();
+        break;
       case 'open-outline':
         openOutlinePanel();
         break;
@@ -83,6 +87,9 @@ export function CommandPalette() {
         break;
       case 'focus-mode':
         toggleFocusMode();
+        break;
+      case 'zen-mode':
+        toggleZenModeWithFullscreen();
         break;
       case 'typewriter-mode':
         toggleTypewriterMode();

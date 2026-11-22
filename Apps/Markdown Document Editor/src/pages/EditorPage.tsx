@@ -30,7 +30,7 @@ const ScrollProgressBar = React.memo(
   )
 );
 ScrollProgressBar.displayName = 'ScrollProgressBar';
-import { AlignVerticalJustifyCenter, Eye, Minimize2 } from 'lucide-react';
+import { AlignVerticalJustifyCenter, Eye, Expand, Maximize2, Minimize2, Shrink } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
 import { DocumentSidebar } from '../features/documents/components/DocumentSidebar';
 import { EditorToolbar } from '../features/editor/components/EditorToolbar';
@@ -51,6 +51,7 @@ import { KnowledgeGraphModal } from '../features/graph/components/KnowledgeGraph
 import { AssetManagerModal } from '../features/assets/components/AssetManagerModal';
 import { FrontmatterBar } from '../features/editor/components/FrontmatterBar';
 import { ReadabilityPanel } from '../features/editor/components/ReadabilityPanel';
+import { TableOfContentsSidebar } from '../features/editor/components/TableOfContentsSidebar';
 import { TableBuilderModal } from '../features/editor/components/TableBuilderModal';
 import { ImportBackupModal } from '../features/documents/components/ImportBackupModal';
 import { GoogleDriveModal } from '../components/GoogleDriveModal';
@@ -91,18 +92,29 @@ import { formatTableAtCursor } from '../lib/markdown/tables';
 import { cn } from '../lib/utils/cn';
 import { desktop } from '../lib/desktop/bridge';
 
+import {
+  exitZenMode,
+  toggleNativeFullscreen,
+} from '../lib/editor/zenFullscreen';
+
 export function EditorPage() {
   const { documents, getActiveDocument, updateDocumentContent } = useDocumentStore();
   const {
     editorMode,
     focusMode,
     focusDimming,
+    zenMode,
+    zenDimming,
     typewriterMode,
     toggleFocusMode,
     toggleFocusDimming,
+    toggleZenDimming,
     toggleTypewriterMode,
   } = useEditorStore();
   const { isLeftSidebarOpen } = useUIStore();
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(
+    typeof document !== 'undefined' ? Boolean(document.fullscreenElement) : false
+  );
 
   const activeDoc = getActiveDocument();
   const allWorkspaceTags = React.useMemo(() => {
@@ -132,10 +144,13 @@ export function EditorPage() {
 
   const [currentEditorDirection, setCurrentEditorDirection] =
     useState<TextDirection>('ltr');
+  const [activePreviewHeadingIndex, setActivePreviewHeadingIndex] =
+    useState<number | null>(null);
 
   useEffect(() => {
     progressBarRef.current?.setProgress(0);
     setCursorPosition({ start: 0, end: 0 });
+    setActivePreviewHeadingIndex(null);
     selectionRef.current = { start: 0, end: 0 };
   }, [activeDoc?.id]);
 
@@ -156,8 +171,13 @@ export function EditorPage() {
     });
   }, []);
 
-  const showEditor = editorMode === 'markdown' || editorMode === 'split';
-  const showPreview = editorMode === 'preview' || editorMode === 'split';
+  const isPreviewOnly = editorMode === 'preview';
+  const showEditor = zenMode
+    ? !isPreviewOnly
+    : editorMode === 'markdown' || editorMode === 'split';
+  const showPreview = zenMode
+    ? isPreviewOnly
+    : editorMode === 'preview' || editorMode === 'split';
 
   const handleEditorScrollProgress = useCallback((progress: number) => {
     if (!showPreview || hoveredPaneRef.current === 'editor') {
@@ -416,15 +436,65 @@ export function EditorPage() {
     }
   }, [editorMode]);
 
+  useEffect(() => {
+    if (zenMode) {
+      requestAnimationFrame(() => {
+        editorRef.current?.focus();
+      });
+    }
+  }, [zenMode]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleFullscreenChange = () => {
+      setIsNativeFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (!zenMode) return;
+    const handleZenEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const ui = useUIStore.getState();
+      const anyModalOpen =
+        ui.isCommandPaletteOpen ||
+        ui.isSearchPanelOpen ||
+        ui.isExportModalOpen ||
+        ui.isTemplatePickerOpen ||
+        ui.isHistoryPanelOpen ||
+        ui.isDriveModalOpen ||
+        ui.isCalendarModalOpen ||
+        ui.isTableBuilderOpen ||
+        ui.isImportBackupModalOpen ||
+        ui.isPresentationOpen ||
+        ui.isKnowledgeGraphOpen ||
+        ui.isAssetManagerOpen ||
+        ui.isSettingsSidebarOpen;
+      if (anyModalOpen) return;
+      exitZenMode();
+    };
+    window.addEventListener('keydown', handleZenEscape);
+    return () => window.removeEventListener('keydown', handleZenEscape);
+  }, [zenMode]);
+
+  const hideTopAndLeftChrome = focusMode || zenMode;
+  const zenWords = activeDoc?.content.trim()
+    ? activeDoc.content.trim().split(/\s+/).length
+    : 0;
+  const supportsFullscreen =
+    typeof document !== 'undefined' && Boolean(document.fullscreenEnabled);
+
   return (
     <div className="flex h-full w-full flex-1 min-w-0 flex-col overflow-hidden">
-      {!focusMode && <TopBar />}
+      {!hideTopAndLeftChrome && <TopBar />}
 
       <div className="flex flex-1 min-w-0 overflow-hidden relative">
-        {!focusMode && isLeftSidebarOpen && <DocumentSidebar />}
+        {!hideTopAndLeftChrome && isLeftSidebarOpen && <DocumentSidebar />}
 
         <div className="flex flex-1 min-w-0 flex-col overflow-hidden">
-          {!focusMode && (
+          {!hideTopAndLeftChrome && (
             <EditorToolbar
               onAction={handleToolbarAction}
               editorDirection={currentEditorDirection}
@@ -432,10 +502,75 @@ export function EditorPage() {
           )}
 
           {/* Subtle Scroll Progress Bar at the top of editor view */}
-          <ScrollProgressBar ref={progressBarRef} />
+          {!zenMode && <ScrollProgressBar ref={progressBarRef} />}
 
           <div className="flex flex-col md:flex-row flex-1 min-w-0 overflow-hidden relative">
-            {focusMode && (
+            {zenMode ? (
+              <div className="absolute top-3 right-4 z-30 flex items-center gap-1 rounded-full border border-border/60 bg-background/85 backdrop-blur-md px-2.5 py-1 shadow-md opacity-15 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-300 text-[11px]">
+                <span className="px-1.5 text-muted-foreground tabular-nums">
+                  {zenWords.toLocaleString()} {zenWords === 1 ? 'word' : 'words'}
+                </span>
+                <div className="h-3 w-px bg-border/60" />
+                <button
+                  type="button"
+                  onClick={toggleZenDimming}
+                  title="Dim surrounding paragraphs"
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-full font-medium transition-colors',
+                    zenDimming
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  <Eye className="h-3 w-3" />
+                  <span className="hidden sm:inline">Dim</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleTypewriterMode}
+                  title="Typewriter scrolling (keep cursor centered)"
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-full font-medium transition-colors',
+                    typewriterMode
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  <AlignVerticalJustifyCenter className="h-3 w-3" />
+                  <span className="hidden sm:inline">Typewriter</span>
+                </button>
+                {supportsFullscreen && (
+                  <button
+                    type="button"
+                    onClick={() => void toggleNativeFullscreen()}
+                    title={isNativeFullscreen ? 'Exit Browser Fullscreen' : 'Enter Browser Fullscreen'}
+                    className={cn(
+                      'inline-flex items-center gap-1 p-1 rounded-full font-medium transition-colors',
+                      isNativeFullscreen
+                        ? 'text-primary bg-primary/10'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                    aria-label={isNativeFullscreen ? 'Exit Browser Fullscreen' : 'Enter Browser Fullscreen'}
+                  >
+                    {isNativeFullscreen ? (
+                      <Shrink className="h-3 w-3" />
+                    ) : (
+                      <Expand className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+                <div className="h-3 w-px bg-border/60 mx-0.5" />
+                <button
+                  type="button"
+                  onClick={exitZenMode}
+                  title="Exit Zen Mode (Esc or Alt+Z)"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Minimize2 className="h-3 w-3" />
+                  <span>Exit Zen</span>
+                </button>
+              </div>
+            ) : focusMode ? (
               <div className="absolute top-3 right-4 z-30 flex items-center gap-1 rounded-full border border-border/70 bg-background/85 backdrop-blur-md px-2 py-1 shadow-md opacity-70 hover:opacity-100 transition-opacity text-[11px]">
                 <button
                   type="button"
@@ -476,18 +611,19 @@ export function EditorPage() {
                   <span>Exit Focus</span>
                 </button>
               </div>
-            )}
+            ) : null}
 
             {showEditor && (
               <div
                 className={cn(
                   'flex-1 min-w-0 overflow-hidden flex flex-col',
                   showPreview && 'border-r',
-                  focusMode && !showPreview && 'max-w-3xl mx-auto w-full'
+                  (zenMode || (focusMode && !showPreview)) && 'max-w-3xl mx-auto w-full',
+                  zenMode && 'py-4 sm:py-8'
                 )}
                 onMouseEnter={() => { hoveredPaneRef.current = 'editor'; }}
               >
-                {!focusMode && activeDoc && (
+                {!hideTopAndLeftChrome && activeDoc && (
                   <FrontmatterBar
                     content={activeDoc.content}
                     allWorkspaceTags={allWorkspaceTags}
@@ -511,13 +647,18 @@ export function EditorPage() {
             )}
 
             <div
-              className={cn('flex-1 min-w-0 overflow-hidden', !showPreview && 'opacity-0 pointer-events-none absolute -left-[9999px] top-0 w-[800px] h-full overflow-hidden -z-50')}
+              className={cn(
+                'flex-1 min-w-0 overflow-hidden',
+                zenMode && showPreview && 'max-w-3xl mx-auto w-full py-4 sm:py-8',
+                !showPreview && 'opacity-0 pointer-events-none absolute -left-[9999px] top-0 w-[800px] h-full overflow-hidden -z-50'
+              )}
               onMouseEnter={() => { hoveredPaneRef.current = 'preview'; }}
             >
               <div ref={previewRef} className="h-full">
                 <MarkdownPreview
                   content={activeDoc?.content || ''}
                   onScrollProgress={showPreview ? handlePreviewScrollProgress : undefined}
+                  onActiveHeadingChange={showPreview ? setActivePreviewHeadingIndex : undefined}
                   onToggleTask={handleToggleTask}
                   onWikiLinkClick={handleWikiLinkClick}
                   className="h-full"
@@ -526,11 +667,14 @@ export function EditorPage() {
             </div>
           </div>
 
-          <EditorStatusBar cursorPosition={cursorPosition} />
+          {!zenMode && <EditorStatusBar cursorPosition={cursorPosition} />}
         </div>
 
-        <ReadabilityPanel />
-        <SettingsSidebar />
+        {!hideTopAndLeftChrome && (
+          <TableOfContentsSidebar activePreviewHeadingIndex={activePreviewHeadingIndex} />
+        )}
+        {!zenMode && <ReadabilityPanel />}
+        {!zenMode && <SettingsSidebar />}
       </div>
 
       <input

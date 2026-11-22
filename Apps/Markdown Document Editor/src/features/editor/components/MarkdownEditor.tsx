@@ -106,6 +106,8 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
     const { editor: editorSettings, typography } = useSettingsStore();
     const focusMode = useEditorStore((s) => s.focusMode);
     const focusDimming = useEditorStore((s) => s.focusDimming);
+    const zenMode = useEditorStore((s) => s.zenMode);
+    const zenDimming = useEditorStore((s) => s.zenDimming);
     const typewriterMode = useEditorStore((s) => s.typewriterMode);
     const showStyleHighlights = useEditorStore((s) => s.showStyleHighlights);
     const setCursorOffset = useEditorStore((s) => s.setCursorOffset);
@@ -328,7 +330,7 @@ export const MarkdownEditor = React.memo(forwardRef<MarkdownEditorHandle, Markdo
       return () => observer.disconnect();
     }, [syncOverlayMetrics]);
 
-    const isDimmingActive = focusMode && focusDimming;
+    const isDimmingActive = (focusMode && focusDimming) || (zenMode && zenDimming);
     const activeFocusRanges = useMemo(() => {
       if (!isDimmingActive) return null;
       return getFocusHighlightRanges(displayText, displayCaret);

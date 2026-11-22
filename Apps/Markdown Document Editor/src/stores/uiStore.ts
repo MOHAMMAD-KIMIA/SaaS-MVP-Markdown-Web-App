@@ -26,6 +26,7 @@ interface UIStore {
   isKnowledgeGraphOpen: boolean;
   isAssetManagerOpen: boolean;
   isReadabilityOpen: boolean;
+  isTableOfContentsOpen: boolean;
   importBackupInitialTab: 'import' | 'backup';
   leftSidebarTab: 'documents' | 'outline' | 'backlinks' | 'comments';
 
@@ -67,10 +68,14 @@ interface UIStore {
   openReadability: () => void;
   closeReadability: () => void;
   toggleReadability: () => void;
+  openTableOfContents: () => void;
+  closeTableOfContents: () => void;
+  toggleTableOfContents: () => void;
   closeAllModals: () => void;
 }
 
 const isWideDesktop = () => (typeof window !== 'undefined' ? window.innerWidth >= 1280 : true);
+const isExtraWideDesktop = () => (typeof window !== 'undefined' ? window.innerWidth >= 1440 : false);
 
 export const useUIStore = create<UIStore>((set) => ({
   currentView: 'editor',
@@ -90,6 +95,7 @@ export const useUIStore = create<UIStore>((set) => ({
   isKnowledgeGraphOpen: false,
   isAssetManagerOpen: false,
   isReadabilityOpen: false,
+  isTableOfContentsOpen: isExtraWideDesktop(),
   importBackupInitialTab: 'import',
   leftSidebarTab: 'documents',
 
@@ -116,8 +122,18 @@ export const useUIStore = create<UIStore>((set) => ({
     set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
 
   toggleSettingsSidebar: () =>
-    set((state) => ({ isSettingsSidebarOpen: !state.isSettingsSidebarOpen })),
-  openSettingsSidebar: () => set({ isSettingsSidebarOpen: true }),
+    set((state) => {
+      const next = !state.isSettingsSidebarOpen;
+      return next
+        ? { isSettingsSidebarOpen: true, isReadabilityOpen: false, isTableOfContentsOpen: false }
+        : { isSettingsSidebarOpen: false };
+    }),
+  openSettingsSidebar: () =>
+    set({
+      isSettingsSidebarOpen: true,
+      isReadabilityOpen: false,
+      isTableOfContentsOpen: false,
+    }),
   closeSettingsSidebar: () => set({ isSettingsSidebarOpen: false }),
 
   openCommandPalette: () => set({ isCommandPaletteOpen: true }),
@@ -157,9 +173,41 @@ export const useUIStore = create<UIStore>((set) => ({
   openAssetManager: () => set({ isAssetManagerOpen: true }),
   closeAssetManager: () => set({ isAssetManagerOpen: false }),
 
-  openReadability: () => set({ isReadabilityOpen: true }),
+  openReadability: () =>
+    set({
+      isReadabilityOpen: true,
+      isSettingsSidebarOpen: false,
+      isTableOfContentsOpen: false,
+    }),
   closeReadability: () => set({ isReadabilityOpen: false }),
-  toggleReadability: () => set((state) => ({ isReadabilityOpen: !state.isReadabilityOpen })),
+  toggleReadability: () =>
+    set((state) => {
+      const next = !state.isReadabilityOpen;
+      return next
+        ? { isReadabilityOpen: true, isSettingsSidebarOpen: false, isTableOfContentsOpen: false }
+        : { isReadabilityOpen: false };
+    }),
+
+  openTableOfContents: () =>
+    set({
+      currentView: 'editor',
+      isTableOfContentsOpen: true,
+      isSettingsSidebarOpen: false,
+      isReadabilityOpen: false,
+    }),
+  closeTableOfContents: () => set({ isTableOfContentsOpen: false }),
+  toggleTableOfContents: () =>
+    set((state) => {
+      const next = !state.isTableOfContentsOpen;
+      return next
+        ? {
+            currentView: 'editor',
+            isTableOfContentsOpen: true,
+            isSettingsSidebarOpen: false,
+            isReadabilityOpen: false,
+          }
+        : { isTableOfContentsOpen: false };
+    }),
 
   closeAllModals: () =>
     set({

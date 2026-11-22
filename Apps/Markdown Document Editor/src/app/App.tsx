@@ -44,6 +44,8 @@ export default function App() {
   const loadAssets = useAssetStore((state) => state.loadFromStorage);
   const theme = useSettingsStore((state) => state.theme);
   const focusMode = useEditorStore((state) => state.focusMode);
+  const zenMode = useEditorStore((state) => state.zenMode);
+  const hideAppChrome = focusMode || zenMode;
 
   useEffect(() => {
     loadDocuments();
@@ -70,10 +72,10 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground font-sans overflow-hidden select-none">
-      {!focusMode && <DesktopMenuBar currentView={currentView} onNavigate={setCurrentView} />}
+      {!hideAppChrome && <DesktopMenuBar currentView={currentView} onNavigate={setCurrentView} />}
       
       <div className="flex-1 flex min-w-0 overflow-hidden relative">
-        {!focusMode && <DesktopAppNav currentView={currentView} onNavigate={setCurrentView} />}
+        {!hideAppChrome && <DesktopAppNav currentView={currentView} onNavigate={setCurrentView} />}
         
         <main
           className={cn(

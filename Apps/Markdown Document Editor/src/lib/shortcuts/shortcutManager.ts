@@ -3,6 +3,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore, AppView } from '../../stores/uiStore';
 import { desktop } from '../desktop/bridge';
+import { toggleZenModeWithFullscreen } from '../editor/zenFullscreen';
 
 export interface ShortcutContext {
   onNavigate?: (view: AppView) => void;
@@ -88,6 +89,16 @@ export const SHORTCUTS: ShortcutDefinition[] = [
     },
   },
   {
+    id: 'toggle-toc',
+    label: 'Toggle Table of Contents Sidebar',
+    keys: ['alt+t'],
+    category: 'View',
+    description: 'Show or hide the automatic Table of Contents sidebar',
+    execute: () => {
+      useUIStore.getState().toggleTableOfContents();
+    },
+  },
+  {
     id: 'toggle-focus-mode',
     label: 'Toggle Focus Mode',
     keys: ['ctrl+shift+f', 'meta+shift+f', 'f11'],
@@ -98,6 +109,21 @@ export const SHORTCUTS: ShortcutDefinition[] = [
       toggleFocusMode();
       const currentFocus = useEditorStore.getState().focusMode;
       desktop.showNotification('Focus Mode', currentFocus ? 'Focus mode enabled.' : 'Focus mode disabled.');
+    },
+  },
+  {
+    id: 'toggle-zen-mode',
+    label: 'Toggle Zen Mode',
+    keys: ['alt+z'],
+    category: 'View',
+    description: 'Toggle full-screen distraction-free Zen Mode',
+    execute: () => {
+      toggleZenModeWithFullscreen();
+      const currentZen = useEditorStore.getState().zenMode;
+      desktop.showNotification(
+        'Zen Mode',
+        currentZen ? 'Zen Mode enabled. Press Esc or Alt+Z to exit.' : 'Zen Mode disabled.'
+      );
     },
   },
   {

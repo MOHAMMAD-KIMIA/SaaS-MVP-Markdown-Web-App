@@ -125,6 +125,15 @@ export function OutlinePanel({ className, onJumpToHeading }: OutlinePanelProps) 
         },
       })
     );
+    window.dispatchEvent(
+      new CustomEvent('preview-jump-heading', {
+        detail: {
+          ordinal: heading.ordinal,
+          slug: heading.slug,
+          title: heading.title,
+        },
+      })
+    );
     onJumpToHeading?.();
   };
 

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Search, Download, Settings, Eye, Edit, Columns, PanelLeft, Presentation, Network } from 'lucide-react';
+import { Search, Download, Settings, Eye, Edit, Columns, PanelLeft, Presentation, Network, Expand, ListTree } from 'lucide-react';
 import { Button } from '../../app/components/ui/button';
 import { Input } from '../../app/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '../../app/components/ui/toggle-group';
@@ -8,6 +8,7 @@ import { useDocumentStore } from '../../stores/documentStore';
 import { useEditorStore } from '../../stores/editorStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { enterZenMode } from '../../lib/editor/zenFullscreen';
 import { MarkoraLogo } from '../MarkoraLogo';
 import { GoogleUserButton } from '../GoogleUserButton';
 
@@ -18,12 +19,14 @@ export function TopBar() {
   const {
     isLeftSidebarOpen,
     isSettingsSidebarOpen,
+    isTableOfContentsOpen,
     openSearchPanel,
     openExportModal,
     openPresentation,
     openKnowledgeGraph,
     toggleSettingsSidebar,
     toggleLeftSidebar,
+    toggleTableOfContents,
   } = useUIStore();
 
   const activeDoc = getActiveDocument();
@@ -159,8 +162,24 @@ export function TopBar() {
           <Presentation className="h-4 w-4" />
         </Button>
 
+        <Button variant="ghost" size="sm" onClick={enterZenMode} title="Zen Mode (Alt+Z)" aria-label="Enter Zen Mode" className="h-8 w-8 p-0 sm:w-auto sm:p-2">
+          <Expand className="h-4 w-4" />
+        </Button>
+
         <Button variant="ghost" size="sm" onClick={openExportModal} title="Export Document" className="h-8 w-8 p-0 sm:w-auto sm:p-2">
           <Download className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant={isTableOfContentsOpen ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={toggleTableOfContents}
+          title="Table of Contents (Alt+T)"
+          aria-label="Toggle Table of Contents"
+          aria-pressed={isTableOfContentsOpen}
+          className="h-8 w-8 p-0 sm:w-auto sm:p-2"
+        >
+          <ListTree className="h-4 w-4" />
         </Button>
 
         <Button

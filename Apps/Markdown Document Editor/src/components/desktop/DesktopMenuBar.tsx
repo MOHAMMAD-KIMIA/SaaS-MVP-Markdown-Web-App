@@ -54,8 +54,10 @@ import {
   AlignVerticalJustifyCenter,
   Network,
   Image as ImageIcon,
+  Expand,
 } from 'lucide-react';
 import { desktop } from '../../lib/desktop/bridge';
+import { toggleZenModeWithFullscreen } from '../../lib/editor/zenFullscreen';
 import { useDocumentStore } from '../../stores/documentStore';
 import { useEditorStore } from '../../stores/editorStore';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -328,6 +330,12 @@ export function DesktopMenuBar({ currentView: _currentView, onNavigate }: Deskto
           action: () => useUIStore.getState().toggleLeftSidebar(),
         },
         {
+          label: 'Table of Contents Sidebar',
+          shortcut: 'Alt+T',
+          icon: ListTree,
+          action: () => useUIStore.getState().toggleTableOfContents(),
+        },
+        {
           label: 'Document Outline & Minimap',
           icon: ListTree,
           action: () => useUIStore.getState().openOutlinePanel(),
@@ -359,6 +367,12 @@ export function DesktopMenuBar({ currentView: _currentView, onNavigate }: Deskto
           shortcut: 'F11',
           icon: Maximize2,
           action: () => toggleFocusMode(),
+        },
+        {
+          label: 'Toggle Zen Mode (Full-Screen)',
+          shortcut: 'Alt+Z',
+          icon: Expand,
+          action: () => toggleZenModeWithFullscreen(),
         },
         {
           label: 'Toggle Typewriter Scrolling',

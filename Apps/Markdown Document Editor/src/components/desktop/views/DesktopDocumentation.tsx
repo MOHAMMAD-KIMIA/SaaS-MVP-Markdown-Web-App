@@ -30,6 +30,8 @@ export function DesktopDocumentation({ onNavigate }: DesktopDocumentationProps) 
     { key: 'Ctrl + K', desc: 'Open command palette for quick action execution' },
     { key: 'Ctrl + F', desc: 'Find and replace text within active editor' },
     { key: 'F11', desc: 'Toggle distraction-free full screen Focus Mode' },
+    { key: 'Alt + Z', desc: 'Toggle full-screen distraction-free Zen Mode' },
+    { key: 'Alt + T', desc: 'Toggle Table of Contents sidebar for active document' },
     { key: 'Ctrl + B', desc: 'Toggle bold styling on selected text' },
     { key: 'Ctrl + I', desc: 'Toggle italic styling on selected text' },
     { key: 'Alt + F4', desc: 'Close Markora Desktop window safely' },

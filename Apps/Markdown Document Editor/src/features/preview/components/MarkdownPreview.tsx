@@ -20,6 +20,7 @@ import { remarkTextDirection } from './remarkTextDirection';
 import { detectTextDirection } from '../../../lib/markdown/textDirection';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { parseFrontmatter } from '../../../lib/markdown/frontmatter';
+import { slugifyHeading } from '../../../lib/markdown/outline';
 import {
   ASSET_URI_PREFIX,
   extractWidthFromImageTitle,
@@ -207,6 +208,7 @@ interface MarkdownPreviewProps {
   content: string;
   className?: string;
   onScrollProgress?: (progress: number) => void;
+  onActiveHeadingChange?: (ordinal: number | null) => void;
   onToggleTask?: (taskIndex: number) => void;
   onWikiLinkClick?: (slugOrTitle: string) => void;
 }
@@ -215,6 +217,7 @@ export const MarkdownPreview = React.memo(function MarkdownPreview({
   content,
   className,
   onScrollProgress,
+  onActiveHeadingChange,
   onToggleTask,
   onWikiLinkClick,
 }: MarkdownPreviewProps) {
@@ -222,6 +225,9 @@ export const MarkdownPreview = React.memo(function MarkdownPreview({
   const assets = useAssetStore((state) => state.assets);
   const frontmatter = React.useMemo(() => parseFrontmatter(content), [content]);
   const processedContent = preprocessMarkdown(frontmatter.body);
+
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const exportRootRef = React.useRef<HTMLDivElement | null>(null);
 
   const assetDataUrlMap = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -231,11 +237,108 @@ export const MarkdownPreview = React.memo(function MarkdownPreview({
     return map;
   }, [assets]);
 
+  const computeActiveHeadingOrdinal = React.useCallback(() => {
+    if (!onActiveHeadingChange) return;
+    const container = scrollContainerRef.current;
+    const root = exportRootRef.current;
+    if (!container || !root) return;
+
+    const headingEls = Array.from(
+      root.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+    );
+    if (headingEls.length === 0) {
+      onActiveHeadingChange(null);
+      return;
+    }
+
+    const containerTop = container.getBoundingClientRect().top;
+    const threshold = containerTop + 96;
+    let activeOrdinal: number | null = 0;
+
+    for (let i = 0; i < headingEls.length; i++) {
+      const top = headingEls[i].getBoundingClientRect().top;
+      if (top <= threshold) {
+        activeOrdinal = i;
+      } else {
+        break;
+      }
+    }
+
+    onActiveHeadingChange(activeOrdinal);
+  }, [onActiveHeadingChange]);
+
+  // Assign stable slug IDs & ordinal attributes to rendered headings for TOC jump + scroll-spy
+  React.useEffect(() => {
+    const root = exportRootRef.current;
+    if (!root) return;
+
+    const headingEls = Array.from(
+      root.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+    );
+    const slugCounts = new Map<string, number>();
+
+    headingEls.forEach((el, idx) => {
+      const text = (el.textContent || '').trim();
+      const baseSlug = slugifyHeading(text);
+      const count = slugCounts.get(baseSlug) || 0;
+      slugCounts.set(baseSlug, count + 1);
+      const slug = count === 0 ? baseSlug : `${baseSlug}-${count}`;
+      el.setAttribute('data-toc-index', String(idx));
+      el.id = slug;
+    });
+
+    computeActiveHeadingOrdinal();
+  }, [processedContent, computeActiveHeadingOrdinal]);
+
+  const scrollToHeadingElement = React.useCallback((el: HTMLElement) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const targetTop = Math.max(0, container.scrollTop + (elRect.top - containerRect.top) - 24);
+    container.scrollTo({ top: targetTop, behavior: 'smooth' });
+  }, []);
+
+  React.useEffect(() => {
+    const handleJumpHeading = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{ ordinal?: number; slug?: string; title?: string }>
+      ).detail;
+      const root = exportRootRef.current;
+      if (!detail || !root) return;
+
+      const headingEls = Array.from(
+        root.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+      );
+      if (headingEls.length === 0) return;
+
+      let target: HTMLElement | undefined;
+      if (typeof detail.ordinal === 'number' && headingEls[detail.ordinal]) {
+        target = headingEls[detail.ordinal];
+      } else if (detail.slug) {
+        target = headingEls.find((el) => el.id === detail.slug);
+      } else if (detail.title) {
+        const needle = detail.title.trim().toLowerCase();
+        target = headingEls.find(
+          (el) => (el.textContent || '').trim().toLowerCase() === needle
+        );
+      }
+
+      if (target) {
+        scrollToHeadingElement(target);
+      }
+    };
+
+    window.addEventListener('preview-jump-heading', handleJumpHeading);
+    return () => window.removeEventListener('preview-jump-heading', handleJumpHeading);
+  }, [scrollToHeadingElement]);
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const maxScroll = target.scrollHeight - target.clientHeight;
     const progress = maxScroll > 0 ? (target.scrollTop / maxScroll) * 100 : 0;
     onScrollProgress?.(Math.min(100, Math.max(0, progress)));
+    computeActiveHeadingOrdinal();
   };
 
   const taskCounterRef = React.useRef(0);
@@ -337,6 +440,7 @@ export const MarkdownPreview = React.memo(function MarkdownPreview({
       a({ children, href, onClick, ...props }: any) {
         const isWikiLink = href?.startsWith('#wiki/');
         const rawTarget = isWikiLink ? decodeURIComponent(href.replace('#wiki/', '')) : '';
+        const isHeadingAnchor = Boolean(href && href.startsWith('#') && !isWikiLink);
 
         const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
           if (isWikiLink) {
@@ -344,6 +448,14 @@ export const MarkdownPreview = React.memo(function MarkdownPreview({
             e.stopPropagation();
             const targetTitle = typeof children === 'string' ? children : rawTarget;
             onWikiLinkClick?.(targetTitle);
+          } else if (isHeadingAnchor && href) {
+            e.preventDefault();
+            const slug = decodeURIComponent(href.slice(1));
+            const root = exportRootRef.current;
+            const target = root?.querySelector<HTMLElement>(`[id="${CSS.escape(slug)}"]`);
+            if (target) {
+              scrollToHeadingElement(target);
+            }
           } else if (onClick) {
             onClick(e);
           }
@@ -475,8 +587,13 @@ export const MarkdownPreview = React.memo(function MarkdownPreview({
       frontmatter.customProperties.length > 0);
 
   return (
-    <div className={cn('h-full overflow-y-auto', className)} onScroll={handleScroll}>
+    <div
+      ref={scrollContainerRef}
+      className={cn('h-full overflow-y-auto', className)}
+      onScroll={handleScroll}
+    >
       <div
+        ref={exportRootRef}
         className="markdown-preview-export-root prose dark:prose-invert max-w-none p-8 markdown-preview-root text-foreground"
         data-export-root="true"
         style={{

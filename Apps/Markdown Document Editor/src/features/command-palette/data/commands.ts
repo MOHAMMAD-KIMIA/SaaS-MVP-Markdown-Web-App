@@ -3,11 +3,13 @@ export const commands = [
   { id: 'mode-markdown', label: 'View: Editor Only', category: 'View', shortcut: '' },
   { id: 'mode-preview', label: 'View: Preview Only', category: 'View', shortcut: '' },
   { id: 'mode-split', label: 'View: Split View', category: 'View', shortcut: '' },
+  { id: 'toggle-toc', label: 'View: Table of Contents Sidebar', category: 'View', shortcut: 'Alt+T' },
   { id: 'open-outline', label: 'View: Document Outline & Heading Minimap', category: 'View', shortcut: '' },
   { id: 'knowledge-graph', label: 'View: Interactive Knowledge Graph', category: 'View', shortcut: '' },
   { id: 'readability-insights', label: 'View: Readability & Writing Style Insights', category: 'View', shortcut: '' },
   { id: 'start-presentation', label: 'View: Present Slide Deck (--- Slides)', category: 'View', shortcut: 'Alt+P' },
   { id: 'focus-mode', label: 'Toggle Focus Mode (Dim Paragraphs)', category: 'View', shortcut: 'F11' },
+  { id: 'zen-mode', label: 'View: Toggle Zen Mode (Full-Screen)', category: 'View', shortcut: 'Alt+Z' },
   { id: 'typewriter-mode', label: 'Toggle Typewriter Scrolling', category: 'View', shortcut: '' },
 
   // Insert

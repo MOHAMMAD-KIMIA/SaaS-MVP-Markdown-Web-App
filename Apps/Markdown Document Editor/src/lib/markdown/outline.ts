@@ -2,8 +2,10 @@
 
 export interface OutlineHeading {
   id: string;
+  ordinal: number;
   level: 1 | 2 | 3 | 4 | 5 | 6;
   title: string;
+  slug: string;
   rawLine: string;
   lineIndex: number;
   startOffset: number;
@@ -17,17 +19,65 @@ function cleanHeadingTitle(raw: string): string {
     .replace(/\s+#+\s*$/, '')
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
     .replace(/`([^`]+)`/g, '$1')
+    .replace(/<[^>]+>/g, '')
     .replace(/(\*\*|__)(.*?)\1/g, '$2')
     .replace(/(\*|_)(.*?)\1/g, '$2')
     .replace(/~~(.*?)~~/g, '$1')
+    .replace(/==(.*?)==/g, '$1')
     .trim();
+}
+
+export function slugifyHeading(title: string): string {
+  return (
+    title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\p{L}\p{N}\s-]/gu, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'section'
+  );
+}
+
+function splitLinesWithOffsets(content: string): Array<{ text: string; startOffset: number }> {
+  const result: Array<{ text: string; startOffset: number }> = [];
+  const lineBreakRe = /\r\n|\n|\r/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = lineBreakRe.exec(content)) !== null) {
+    result.push({
+      text: content.slice(lastIndex, match.index),
+      startOffset: lastIndex,
+    });
+    lastIndex = match.index + match[0].length;
+  }
+
+  result.push({
+    text: content.slice(lastIndex),
+    startOffset: lastIndex,
+  });
+
+  return result;
+}
+
+function isSetextCandidateLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  if (/^\s{0,3}(#{1,6})(\s|$)/.test(line)) return false;
+  if (/^\s{0,3}(>|[-*+]\s|\d+[.)]\s)/.test(line)) return false;
+  if (/^\s{0,3}(`{3,}|~{3,})/.test(line)) return false;
+  if (/^\s{0,3}(-{3,}|={3,}|\*{3,}|_{3,})\s*$/.test(line)) return false;
+  if (/^\s*\|/.test(line)) return false;
+  return true;
 }
 
 export function parseMarkdownOutline(content: string): OutlineHeading[] {
   if (!content) return [];
 
-  const lines = content.split('\n');
+  const lines = splitLinesWithOffsets(content);
   const rawEntries: Array<{
     level: 1 | 2 | 3 | 4 | 5 | 6;
     title: string;
@@ -36,13 +86,12 @@ export function parseMarkdownOutline(content: string): OutlineHeading[] {
     startOffset: number;
   }> = [];
 
-  let offset = 0;
   let activeFenceChar: string | null = null;
   let activeFenceLen = 0;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
+    const line = lines[i].text;
+    const fenceMatch = line.match(/^\s{0,3}(`{3,}|~{3,})(.*)$/);
 
     if (fenceMatch) {
       const fenceStr = fenceMatch[1];
@@ -58,53 +107,72 @@ export function parseMarkdownOutline(content: string): OutlineHeading[] {
         activeFenceChar = null;
         activeFenceLen = 0;
       }
-      offset += line.length + 1;
       continue;
     }
 
-    if (!activeFenceChar) {
-      // Skip YAML frontmatter delimiter block at line 0 if present
-      if (i === 0 && line.trim() === '---') {
-        let j = 1;
-        let foundClose = false;
-        let fmOffset = line.length + 1;
-        while (j < lines.length) {
-          if (lines[j].trim() === '---' || lines[j].trim() === '...') {
-            foundClose = true;
-            fmOffset += lines[j].length + 1;
-            break;
-          }
-          fmOffset += lines[j].length + 1;
-          j++;
-        }
-        if (foundClose) {
-          i = j;
-          offset = fmOffset;
-          continue;
-        }
-      }
+    if (activeFenceChar) continue;
 
-      const headingMatch = line.match(/^(#{1,6})\s+(.+?)\s*$/);
-      if (headingMatch) {
-        const level = headingMatch[1].length as 1 | 2 | 3 | 4 | 5 | 6;
-        const cleaned = cleanHeadingTitle(headingMatch[2]);
-        rawEntries.push({
-          level,
-          title: cleaned || `Heading ${level}`,
-          rawLine: line,
-          lineIndex: i,
-          startOffset: offset,
-        });
+    // Skip YAML frontmatter delimiter block at line 0 if present
+    if (i === 0 && line.trim() === '---') {
+      let j = 1;
+      let foundClose = false;
+      while (j < lines.length) {
+        const candidate = lines[j].text.trim();
+        if (candidate === '---' || candidate === '...') {
+          foundClose = true;
+          break;
+        }
+        j++;
+      }
+      if (foundClose) {
+        i = j;
+        continue;
       }
     }
 
-    offset += line.length + 1;
+    const headingMatch = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length as 1 | 2 | 3 | 4 | 5 | 6;
+      const cleaned = cleanHeadingTitle(headingMatch[2]);
+      rawEntries.push({
+        level,
+        title: cleaned || `Heading ${level}`,
+        rawLine: line,
+        lineIndex: i,
+        startOffset: lines[i].startOffset,
+      });
+      continue;
+    }
+
+    // Setext heading (Title\n=== or Title\n---)
+    if (i > 0) {
+      const setextMatch = line.match(/^\s{0,3}(=+|-+)\s*$/);
+      if (setextMatch && isSetextCandidateLine(lines[i - 1].text)) {
+        const level: 1 | 2 = setextMatch[1][0] === '=' ? 1 : 2;
+        const prevLine = lines[i - 1];
+        const cleaned = cleanHeadingTitle(prevLine.text);
+        if (cleaned) {
+          rawEntries.push({
+            level,
+            title: cleaned,
+            rawLine: prevLine.text,
+            lineIndex: i - 1,
+            startOffset: prevLine.startOffset,
+          });
+        }
+      }
+    }
   }
 
   const stack: Array<{ id: string; level: number }> = [];
+  const slugCounts = new Map<string, number>();
 
   return rawEntries.map((entry, idx) => {
     const id = `h-${entry.lineIndex}-${entry.level}`;
+    const baseSlug = slugifyHeading(entry.title);
+    const prevCount = slugCounts.get(baseSlug) || 0;
+    slugCounts.set(baseSlug, prevCount + 1);
+    const slug = prevCount === 0 ? baseSlug : `${baseSlug}-${prevCount}`;
 
     while (stack.length > 0 && stack[stack.length - 1].level >= entry.level) {
       stack.pop();
@@ -127,11 +195,24 @@ export function parseMarkdownOutline(content: string): OutlineHeading[] {
     return {
       ...entry,
       id,
+      ordinal: idx,
+      slug,
       sectionEndOffset,
       hasChildren,
       parentId,
     };
   });
+}
+
+export function buildMarkdownToc(headings: OutlineHeading[]): string {
+  if (headings.length === 0) return '';
+  const minLevel = Math.min(...headings.map((h) => h.level));
+  return headings
+    .map((h) => {
+      const indent = '  '.repeat(Math.max(0, h.level - minLevel));
+      return `${indent}- [${h.title}](#${h.slug})`;
+    })
+    .join('\n');
 }
 
 export function findActiveHeadingId(

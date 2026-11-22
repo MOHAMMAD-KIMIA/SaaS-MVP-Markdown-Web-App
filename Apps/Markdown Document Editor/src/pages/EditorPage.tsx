@@ -53,6 +53,7 @@ import { FrontmatterBar } from '../features/editor/components/FrontmatterBar';
 import { ReadabilityPanel } from '../features/editor/components/ReadabilityPanel';
 import { TableOfContentsSidebar } from '../features/editor/components/TableOfContentsSidebar';
 import { TableBuilderModal } from '../features/editor/components/TableBuilderModal';
+import { MermaidBuilderModal } from '../features/editor/components/MermaidBuilderModal';
 import { ImportBackupModal } from '../features/documents/components/ImportBackupModal';
 import { GoogleDriveModal } from '../components/GoogleDriveModal';
 import { GoogleCalendarModal } from '../components/GoogleCalendarModal';
@@ -321,8 +322,11 @@ export function EditorPage() {
         result = insertPageBreak(content, start, end);
         break;
       case 'mermaid':
-        result = insertMermaidBlock(content, start, end);
+        result = insertMermaidBlock(content, start, end, data);
         break;
+      case 'openMermaidBuilder':
+        useUIStore.getState().openMermaidBuilder();
+        return;
       case 'customBlock':
         result = insertCustomBlock(content, start, end, data);
         break;
@@ -717,6 +721,9 @@ export function EditorPage() {
           editorRef.current?.getSelection()?.start ?? selectionRef.current.start
         }
         onApplyTable={handleApplyTable}
+      />
+      <MermaidBuilderModal
+        onInsertDiagram={(markdownFence) => handleApplyTable(markdownFence)}
       />
       <ImportBackupModal />
       <TemplatePickerModal />

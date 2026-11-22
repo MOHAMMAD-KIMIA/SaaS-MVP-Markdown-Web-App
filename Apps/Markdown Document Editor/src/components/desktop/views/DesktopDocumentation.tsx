@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { BookOpen, Terminal, Code, GitBranch, Table, CheckSquare, Hash, Keyboard, FileText, ArrowRight } from 'lucide-react';
+import { BookOpen, Terminal, Code, Workflow, Table, CheckSquare, Hash, Keyboard, FileText, ArrowRight } from 'lucide-react';
 import { useDocumentStore } from '../../../stores/documentStore';
 import { AppView } from '../../../stores/uiStore';
 
@@ -144,7 +144,7 @@ $$ x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} $$`;
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-foreground flex items-center space-x-2">
-              <GitBranch className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <Workflow className="w-5 h-5 text-violet-500" />
               <span>Mermaid Diagram Scripting</span>
             </h2>
             <button

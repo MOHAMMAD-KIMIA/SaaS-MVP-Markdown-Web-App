@@ -55,6 +55,7 @@ import {
   Network,
   Image as ImageIcon,
   Expand,
+  Workflow,
 } from 'lucide-react';
 import { desktop } from '../../lib/desktop/bridge';
 import { toggleZenModeWithFullscreen } from '../../lib/editor/zenFullscreen';
@@ -429,7 +430,12 @@ export function DesktopMenuBar({ currentView: _currentView, onNavigate }: Deskto
         { label: 'Format Markdown Tables', icon: Wand2, action: () => triggerEditorAction('formatTables') },
         { label: 'Quick Markdown Table (3x3)', icon: Table, action: () => triggerEditorAction('table') },
         { type: 'separator' },
-        { label: 'Mermaid Diagram (Flowchart)', icon: GitBranch, action: () => triggerEditorAction('mermaid') },
+        { label: 'Mermaid Diagram Studio...', icon: Workflow, action: () => triggerEditorAction('openMermaidBuilder') },
+        { label: 'Mermaid: Flowchart', icon: Workflow, action: () => triggerEditorAction('mermaid', 'flowchart') },
+        { label: 'Mermaid: Sequence Diagram', icon: Workflow, action: () => triggerEditorAction('mermaid', 'sequence') },
+        { label: 'Mermaid: ER Diagram', icon: Workflow, action: () => triggerEditorAction('mermaid', 'er') },
+        { label: 'Mermaid: Mindmap', icon: Workflow, action: () => triggerEditorAction('mermaid', 'mindmap') },
+        { label: 'Mermaid: Gantt Chart', icon: Workflow, action: () => triggerEditorAction('mermaid', 'gantt') },
         { label: 'LaTeX Math Formula', icon: Hash, action: () => triggerEditorAction('mathBlock') },
         { label: 'Highlight Text ==text==', icon: Highlighter, action: () => triggerEditorAction('highlight') },
         { label: 'Wiki-style Link [[Page]]', icon: LinkIcon, action: () => triggerEditorAction('link') },

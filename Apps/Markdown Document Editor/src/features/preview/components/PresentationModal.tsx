@@ -218,7 +218,7 @@ export function PresentationModal() {
           );
         }
         if (language === 'mermaid') {
-          return <MermaidBlock code={codeString} />;
+          return <MermaidBlock code={codeString} compact />;
         }
         return <CodeBlock code={codeString} language={language} />;
       },

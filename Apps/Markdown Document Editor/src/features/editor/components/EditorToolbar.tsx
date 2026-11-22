@@ -20,7 +20,7 @@ import {
   Heading4,
   Heading5,
   Heading6,
-  Network,
+  Workflow,
   AlertCircle,
   Strikethrough,
   Highlighter,
@@ -34,13 +34,26 @@ import {
   Wand2,
   Upload,
   FolderOpen,
+  Sparkles,
+  ArrowLeftRight,
+  Database,
+  CircleDot,
+  Box,
+  CalendarRange,
+  GitFork,
+  PieChart,
+  GitMerge,
+  LayoutGrid,
+  ChevronRight,
 } from 'lucide-react';
+import { MERMAID_TEMPLATES } from '../../../lib/markdown/mermaid';
 import { Button } from '../../../app/components/ui/button';
 import { Separator } from '../../../app/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../app/components/ui/dropdown-menu';
 import {
@@ -267,9 +280,9 @@ export function EditorToolbar({
     },
     {
       id: 'mermaid',
-      label: 'Mermaid Diagram',
-      icon: <Network className="h-4 w-4" />,
-      action: () => onAction('mermaid'),
+      label: 'Mermaid Diagram Studio',
+      icon: <Workflow className="h-4 w-4 text-violet-500" />,
+      action: () => onAction('openMermaidBuilder'),
     },
   ];
 
@@ -599,6 +612,113 @@ export function EditorToolbar({
                       <Table className="h-4 w-4 text-muted-foreground" />
                       <span>Quick Insert Raw Table</span>
                     </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            );
+          }
+
+          if (item.id === 'mermaid') {
+            const templateMeta: Record<
+              string,
+              { shortLabel: string; icon: React.ComponentType<{ className?: string }> }
+            > = {
+              flowchart: { shortLabel: 'Flowchart', icon: Workflow },
+              sequence: { shortLabel: 'Sequence', icon: ArrowLeftRight },
+              er: { shortLabel: 'ER Diagram', icon: Database },
+              state: { shortLabel: 'State', icon: CircleDot },
+              class: { shortLabel: 'Class', icon: Box },
+              gantt: { shortLabel: 'Gantt', icon: CalendarRange },
+              mindmap: { shortLabel: 'Mindmap', icon: GitFork },
+              pie: { shortLabel: 'Pie Chart', icon: PieChart },
+              git: { shortLabel: 'Git Graph', icon: GitMerge },
+              quadrant: { shortLabel: 'Quadrant', icon: LayoutGrid },
+            };
+
+            return (
+              <div
+                key="mermaid-selector"
+                className="inline-flex items-center rounded-md border border-border/60 bg-muted/30 p-0.5 shadow-2xs"
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => onAction('openMermaidBuilder')}
+                      onMouseDown={handleMouseDown}
+                      className="inline-flex h-7 items-center gap-1 rounded px-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                      aria-label="Open Mermaid Diagram Studio"
+                    >
+                      <Workflow className="h-4 w-4 text-violet-500" />
+                      <span className="text-xs hidden lg:inline font-medium">Mermaid</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Mermaid Diagram Studio</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <DropdownMenu>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger
+                        className="inline-flex h-7 w-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                        onMouseDown={handleMouseDown}
+                        aria-label="Mermaid diagram templates"
+                      >
+                        <ChevronDown className="h-3 w-3 opacity-70" />
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Diagram Templates</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <DropdownMenuContent
+                    align="end"
+                    sideOffset={6}
+                    onCloseAutoFocus={(e) => e.preventDefault()}
+                    className="w-64 p-1.5 rounded-xl shadow-lg"
+                  >
+                    <DropdownMenuItem
+                      onSelect={() => onAction('openMermaidBuilder')}
+                      className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 bg-violet-500/8 focus:bg-violet-500/15 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <Sparkles className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                        <span className="text-xs font-medium text-foreground whitespace-nowrap">
+                          Diagram Studio
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap">
+                        <span>Live</span>
+                        <ChevronRight className="h-3 w-3 opacity-60" />
+                      </span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator className="my-1.5" />
+
+                    <div className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                      Quick Insert
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-0.5">
+                      {MERMAID_TEMPLATES.map((tpl) => {
+                        const meta = templateMeta[tpl.id];
+                        const Icon = meta?.icon || Workflow;
+                        return (
+                          <DropdownMenuItem
+                            key={tpl.id}
+                            onSelect={() => onAction('mermaid', tpl.id)}
+                            title={tpl.description}
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-normal cursor-pointer"
+                          >
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate">{meta?.shortLabel || tpl.label}</span>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

@@ -19,6 +19,7 @@ export const commands = [
   { id: 'insert-table', label: 'Visual Table Builder', category: 'Insert', shortcut: '' },
   { id: 'format-tables', label: 'Format Markdown Tables', category: 'Format', shortcut: '' },
   { id: 'insert-code-block', label: 'Insert Code Block', category: 'Insert', shortcut: '' },
+  { id: 'mermaid-studio', label: 'Insert: Mermaid Diagram Studio...', category: 'Insert', shortcut: '' },
 
   // Format
   { id: 'format-bold', label: 'Format: Bold', category: 'Format', shortcut: '⌘B' },

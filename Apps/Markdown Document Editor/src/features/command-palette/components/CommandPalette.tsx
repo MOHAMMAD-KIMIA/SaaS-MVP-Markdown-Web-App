@@ -14,7 +14,7 @@ import { toggleZenModeWithFullscreen } from '../../../lib/editor/zenFullscreen';
 import { commands } from '../data/commands';
 
 export function CommandPalette() {
-  const { isCommandPaletteOpen, closeCommandPalette, openExportModal, openTemplatePicker, openHistoryPanel, openSearchPanel, openTableBuilder, openImportBackupModal, openCommentsPanel, openOutlinePanel, toggleTableOfContents, openPresentation, openKnowledgeGraph, openAssetManager, toggleReadability } = useUIStore();
+  const { isCommandPaletteOpen, closeCommandPalette, openExportModal, openTemplatePicker, openHistoryPanel, openSearchPanel, openTableBuilder, openMermaidBuilder, openImportBackupModal, openCommentsPanel, openOutlinePanel, toggleTableOfContents, openPresentation, openKnowledgeGraph, openAssetManager, toggleReadability } = useUIStore();
   const { setEditorMode, toggleFocusMode, toggleTypewriterMode } = useEditorStore();
 
   useEffect(() => {
@@ -117,6 +117,9 @@ export function CommandPalette() {
         break;
       case 'insert-code-block':
         window.dispatchEvent(new CustomEvent('editor-action', { detail: { actionId: 'codeBlock' } }));
+        break;
+      case 'mermaid-studio':
+        openMermaidBuilder();
         break;
       case 'format-bold':
         window.dispatchEvent(new CustomEvent('editor-action', { detail: { actionId: 'bold' } }));

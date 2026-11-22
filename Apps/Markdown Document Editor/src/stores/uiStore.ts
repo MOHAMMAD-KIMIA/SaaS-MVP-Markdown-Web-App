@@ -27,6 +27,7 @@ interface UIStore {
   isAssetManagerOpen: boolean;
   isReadabilityOpen: boolean;
   isTableOfContentsOpen: boolean;
+  isMermaidBuilderOpen: boolean;
   importBackupInitialTab: 'import' | 'backup';
   leftSidebarTab: 'documents' | 'outline' | 'backlinks' | 'comments';
 
@@ -71,6 +72,8 @@ interface UIStore {
   openTableOfContents: () => void;
   closeTableOfContents: () => void;
   toggleTableOfContents: () => void;
+  openMermaidBuilder: () => void;
+  closeMermaidBuilder: () => void;
   closeAllModals: () => void;
 }
 
@@ -96,6 +99,7 @@ export const useUIStore = create<UIStore>((set) => ({
   isAssetManagerOpen: false,
   isReadabilityOpen: false,
   isTableOfContentsOpen: isExtraWideDesktop(),
+  isMermaidBuilderOpen: false,
   importBackupInitialTab: 'import',
   leftSidebarTab: 'documents',
 
@@ -209,6 +213,9 @@ export const useUIStore = create<UIStore>((set) => ({
         : { isTableOfContentsOpen: false };
     }),
 
+  openMermaidBuilder: () => set({ isMermaidBuilderOpen: true }),
+  closeMermaidBuilder: () => set({ isMermaidBuilderOpen: false }),
+
   closeAllModals: () =>
     set({
       isCommandPaletteOpen: false,
@@ -224,5 +231,6 @@ export const useUIStore = create<UIStore>((set) => ({
       isKnowledgeGraphOpen: false,
       isAssetManagerOpen: false,
       isReadabilityOpen: false,
+      isMermaidBuilderOpen: false,
     }),
 }));

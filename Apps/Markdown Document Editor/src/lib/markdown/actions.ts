@@ -1,3 +1,5 @@
+import { MERMAID_TEMPLATES } from './mermaid';
+
 export interface InsertResult {
   newText: string;
   newSelection: { start: number; end: number };
@@ -154,12 +156,16 @@ export function insertHorizontalRule(
 export function insertMermaidBlock(
   text: string,
   start: number,
-  end: number
+  end: number,
+  templateId?: string
 ): InsertResult {
-  const mermaid = `\n\`\`\`mermaid
-graph TD
-A[Start] --> B[End]
-\`\`\`\n`;
+  const matched = templateId
+    ? MERMAID_TEMPLATES.find((t) => t.id === templateId)
+    : undefined;
+  const body = matched
+    ? matched.code
+    : `flowchart TD\n  A[Start] --> B[End]`;
+  const mermaid = `\n\`\`\`mermaid\n${body}\n\`\`\`\n`;
 
   return insertMarkdown(text, start, end, mermaid, '', '');
 }
